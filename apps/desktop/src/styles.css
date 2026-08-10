@@ -1,0 +1,42 @@
+:root {
+  color-scheme: light;
+  --ink: #10231f;
+  --ink-soft: #1a3530;
+  --mute: #3d564f;
+  --mute-2: #5c7a72;
+  --paper: #e8eeea;
+  --signal: #9fd0c2;
+  --accent: #1f6b5c;
+  --paper-bright: #f4f7f5;
+  --danger: #8b2e2e;
+  font-family: "Outfit", system-ui, sans-serif;
+  background: var(--paper);
+  color: var(--ink);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  min-height: 100%;
+}
+
+body {
+  min-height: 100vh;
+  background:
+    radial-gradient(420px 420px at 92% -8%, var(--signal) 0%, transparent 70%),
+    linear-gradient(160deg, #eef4f0 0%, var(--paper) 45%, #dfe8e3 100%);
+}
+
+button {
+  font: inherit;
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: progress;
+}

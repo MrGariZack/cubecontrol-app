@@ -1,0 +1,32 @@
+{
+  "name": "@tonehub/desktop",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "dist-electron/main.js",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -p tsconfig.node.json && vite build",
+    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.node.json --noEmit",
+    "start": "vite"
+  },
+  "dependencies": {
+    "@tonehub/cube-baby-api": "workspace:*",
+    "@tonehub/cube-baby-protocol": "workspace:*",
+    "@tonehub/midi-core": "workspace:*",
+    "@tonehub/midi-transport-node": "workspace:*",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.0",
+    "@types/react": "^19.2.2",
+    "@types/react-dom": "^19.2.2",
+    "@vitejs/plugin-react": "^5.1.0",
+    "electron": "^39.2.3",
+    "typescript": "~5.9.2",
+    "vite": "^7.2.4",
+    "vite-plugin-electron": "^0.29.0",
+    "vite-plugin-electron-renderer": "^0.14.6"
+  }
+}

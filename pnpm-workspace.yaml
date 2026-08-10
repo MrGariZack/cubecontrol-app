@@ -1,5 +1,10 @@
 packages:
   - apps/*
   - packages/*
-  # Local hardware-core packages (sibling repo). Not vendored — linked for development.
+  # Local hardware-core packages (sibling repo). Linked for development.
   - ../Tonehub/packages/*
+
+onlyBuiltDependencies:
+  - electron
+  - "@julusian/midi"
+  - esbuild

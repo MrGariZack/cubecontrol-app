@@ -1,5 +1,8 @@
-# `@tonehub/midi-host-android` (pending)
+# `@tonehub/midi-host-android` (deferred)
 
-Will implement `NativeMidiHost` from `@tonehub/midi-transport-native` using Android `MidiManager`.
+Priority is **desktop USB** first (`apps/desktop` + `NodeMidiTransport`).
 
-Until this package exists, the mobile app runs in **demo mode** with `FakeCubeBabyTransport`.
+Later: implement `NativeMidiHost` with Android `MidiManager` for USB-MIDI.
+CUBE Baby Bluetooth is audio/tracks only — not used for SysEx control.
+
+Until then, `apps/mobile` stays on **demo mode** (`FakeCubeBabyTransport`).

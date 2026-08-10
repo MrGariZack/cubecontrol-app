@@ -7,9 +7,9 @@ Protocol, SysEx, IR math, and `CubeBabySession` stay in the core.
 
 ## Stack
 
-- TypeScript + Expo (React Native)
-- Core packages via local `file:` links to `../Tonehub/packages/*`
-- Demo mode uses `FakeCubeBabyTransport` (no pedal / no native plugin yet)
+- **Desktop first (now):** Electron + React + `@tonehub/midi-transport-node` (USB real)
+- **Mobile later:** Expo + Android `NativeMidiHost` (USB). Bluetooth del CUBE Baby es solo audio/pistas — fuera de alcance MIDI.
+- Core packages linked from sibling `../Tonehub/packages/*`
 
 ## Setup
 
@@ -19,15 +19,19 @@ Keep this folder next to the core: `Desktop/Tonehub` + `Desktop/tonehub-app`.
 # 1) Build the hardware core once
 cd ../Tonehub && pnpm install && pnpm build
 
-# 2) Install and run the app (workspace links ../Tonehub/packages/*)
+# 2) Install and run the desktop app
 cd ../tonehub-app
 pnpm install
-pnpm mobile
+pnpm desktop
 ```
 
-Then press `w` for web, or scan the QR with Expo Go.
+Cierra CubeSuite, conecta el CUBE Baby por USB y pulsa **Conectar USB**.
 
-Demo connect uses `FakeCubeBabyTransport` from the core — no USB plugin required yet.
+Mobile (demo fake, sin pedal):
+
+```sh
+pnpm mobile
+```
 
 ## Boundary
 

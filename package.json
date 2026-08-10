@@ -4,9 +4,10 @@
   "private": true,
   "packageManager": "pnpm@10.34.1",
   "scripts": {
+    "desktop": "pnpm --filter @tonehub/desktop dev",
     "mobile": "pnpm --filter @tonehub/mobile start",
     "mobile:web": "pnpm --filter @tonehub/mobile web",
     "mobile:android": "pnpm --filter @tonehub/mobile android",
-    "typecheck": "pnpm --filter @tonehub/mobile typecheck"
+    "typecheck": "pnpm -r --if-present typecheck"
   }
 }
