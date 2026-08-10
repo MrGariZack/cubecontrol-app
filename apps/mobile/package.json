@@ -1,0 +1,30 @@
+{
+  "name": "@tonehub/mobile",
+  "version": "0.0.0",
+  "private": true,
+  "main": "index.ts",
+  "scripts": {
+    "start": "expo start",
+    "android": "expo start --android",
+    "ios": "expo start --ios",
+    "web": "expo start --web",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@expo-google-fonts/outfit": "^0.4.2",
+    "@expo-google-fonts/syne": "^0.4.1",
+    "@tonehub/cube-baby-api": "workspace:*",
+    "@tonehub/cube-baby-protocol": "workspace:*",
+    "@tonehub/midi-core": "workspace:*",
+    "@tonehub/midi-transport-native": "workspace:*",
+    "expo": "~57.0.12",
+    "expo-font": "~14.0.9",
+    "expo-status-bar": "~57.0.1",
+    "react": "19.2.3",
+    "react-native": "0.86.2"
+  },
+  "devDependencies": {
+    "@types/react": "~19.2.2",
+    "typescript": "~5.9.2"
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "name": "@tonehub/midi-host-android",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Placeholder for the Android NativeMidiHost plugin"
+}

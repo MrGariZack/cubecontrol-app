@@ -1,0 +1,12 @@
+{
+  "name": "tonehub-app",
+  "version": "0.0.0",
+  "private": true,
+  "packageManager": "pnpm@10.34.1",
+  "scripts": {
+    "mobile": "pnpm --filter @tonehub/mobile start",
+    "mobile:web": "pnpm --filter @tonehub/mobile web",
+    "mobile:android": "pnpm --filter @tonehub/mobile android",
+    "typecheck": "pnpm --filter @tonehub/mobile typecheck"
+  }
+}
