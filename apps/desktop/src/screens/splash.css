@@ -1,0 +1,132 @@
+.splash {
+  min-height: 100vh;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  align-items: center;
+  justify-items: center;
+  gap: 18px;
+  padding: 40px 28px 36px;
+  position: relative;
+  overflow: hidden;
+  background:
+    radial-gradient(700px 360px at 50% 10%, rgba(46, 196, 182, 0.14), transparent 60%),
+    radial-gradient(520px 280px at 80% 80%, rgba(74, 168, 255, 0.08), transparent 55%),
+    linear-gradient(165deg, #10151c 0%, #07090c 48%, #050607 100%);
+}
+
+.splash__aurora {
+  position: absolute;
+  inset: -20% -10% auto;
+  height: 55%;
+  background:
+    radial-gradient(ellipse at 40% 40%, rgba(46, 196, 182, 0.18), transparent 55%),
+    radial-gradient(ellipse at 70% 20%, rgba(255, 90, 122, 0.08), transparent 50%);
+  filter: blur(8px);
+  pointer-events: none;
+  animation: splash-aurora 6s ease-in-out infinite alternate;
+}
+
+.splash__grid {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+  background-size: 48px 48px;
+  mask-image: radial-gradient(circle at 50% 45%, black 20%, transparent 75%);
+  pointer-events: none;
+  opacity: 0.5;
+}
+
+@keyframes splash-aurora {
+  from {
+    transform: translate3d(-2%, 0, 0) scale(1);
+  }
+  to {
+    transform: translate3d(2%, 3%, 0) scale(1.05);
+  }
+}
+
+.splash__brand {
+  position: relative;
+  z-index: 2;
+  text-align: center;
+}
+
+.splash__eyebrow {
+  margin: 0 0 8px;
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--mute);
+}
+
+.splash__logo {
+  margin: 0;
+  font-family: "Space Grotesk", sans-serif;
+  font-weight: 700;
+  font-size: clamp(40px, 7vw, 64px);
+  letter-spacing: -0.04em;
+  line-height: 1;
+}
+
+.splash__pedal {
+  position: relative;
+  z-index: 2;
+  width: min(820px, 100%);
+  transform-style: preserve-3d;
+  perspective: 1200px;
+  pointer-events: none;
+  user-select: none;
+}
+
+.splash__pedal .cube-stage__hint {
+  display: none;
+}
+
+.splash__pedal .cube-baby {
+  box-shadow:
+    0 40px 80px rgba(0, 0, 0, 0.55),
+    0 0 0 1px rgba(255, 255, 255, 0.04),
+    0 0 60px rgba(46, 196, 182, 0.08);
+}
+
+.splash__footer {
+  position: relative;
+  z-index: 2;
+  width: min(360px, 80%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.splash__status {
+  margin: 0;
+  font-size: 12px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+
+.splash__bar {
+  width: 100%;
+  height: 3px;
+  border-radius: 99px;
+  background: rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+}
+
+.splash__bar-fill {
+  height: 100%;
+  width: 100%;
+  background: linear-gradient(90deg, var(--accent), #4aa8ff);
+  transform: scaleX(0);
+  transform-origin: left center;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .splash__aurora {
+    animation: none;
+  }
+}

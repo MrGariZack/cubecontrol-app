@@ -15,10 +15,14 @@
     "@tonehub/cube-baby-protocol": "workspace:*",
     "@tonehub/midi-core": "workspace:*",
     "@tonehub/midi-transport-node": "workspace:*",
+    "gsap": "^3.15.0",
+    "jszip": "^3.10.1",
+    "pitchy": "^4.1.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8"
   },
   "devDependencies": {
+    "@types/jszip": "^3.4.1",
     "@types/node": "^22.15.0",
     "@types/react": "^19.2.2",
     "@types/react-dom": "^19.2.2",

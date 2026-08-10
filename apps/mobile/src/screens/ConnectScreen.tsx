@@ -93,7 +93,7 @@ export function ConnectScreen() {
       <Animated.View style={[styles.signal, { opacity: pulse }]} />
 
       <Animated.View style={{ opacity: brandOpacity, transform: [{ translateY: brandY }] }}>
-        <Text style={styles.brand}>ToneHub</Text>
+        <Text style={styles.brand}>CubeControl</Text>
         <Text style={styles.headline}>Habla con tu CUBE Baby</Text>
         <Text style={styles.support}>
           Laboratorio UI sobre el hardware-core. Hoy: sesión demo sin pedal.

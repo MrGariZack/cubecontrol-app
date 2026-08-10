@@ -13,5 +13,11 @@
     "noUncheckedIndexedAccess": true,
     "exactOptionalPropertyTypes": true
   },
-  "include": ["src"]
+  "include": [
+    "src",
+    "electron/preload.ts",
+    "electron/deviceBridge.ts",
+    "electron/library/types.ts"
+  ]
 }
+

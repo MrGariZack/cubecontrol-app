@@ -17,7 +17,9 @@ export default defineConfig({
                 "@tonehub/cube-baby-api",
                 "@tonehub/cube-baby-protocol",
                 "@tonehub/midi-core",
+                "jszip",
               ],
+
             },
           },
         },

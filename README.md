@@ -1,6 +1,6 @@
-# ToneHub App
+# CubeControl (tonehub-app)
 
-Product / lab UI for ToneHub. **Separate** from the hardware-core repo (`../Tonehub`).
+Product UI **CubeControl** for CUBE Baby. **Separate** from the hardware-core repo (`../Tonehub`).
 
 This repo owns screens, navigation, and (soon) native MIDI plugins.  
 Protocol, SysEx, IR math, and `CubeBabySession` stay in the core.
@@ -25,7 +25,10 @@ pnpm install
 pnpm desktop
 ```
 
-Cierra CubeSuite, conecta el CUBE Baby por USB y pulsa **Conectar USB**.
+Cierra CubeSuite, conecta el CUBE Baby por USB y pulsa **Conectar USB**.  
+Entras al **estudio** (oscuro): cadena Drive→Delay→Rev→Mod→Cab→Out, knobs, slots A/B/C,
+**Guardar** al bank, **Exportar/Importar** bank JSON (`tonehub-cube-baby-bank-v1`, compatible con la CLI),
+y **Cargar IR** a cualquiera de los 8 Cabinets (1..8 → ROM 0..7; 8 = upload).
 
 Mobile (demo fake, sin pedal):
 
