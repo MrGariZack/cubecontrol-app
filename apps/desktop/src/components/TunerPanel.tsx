@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useI18n } from "../i18n";
 import {
   GUITAR_STRINGS,
   nearestGuitarString,
@@ -23,6 +24,7 @@ function inTune(cents: number, window = 5): boolean {
 }
 
 export function TunerPanel({ active }: TunerPanelProps) {
+  const { t } = useI18n();
   const [mode, setMode] = useState<TunerMode>("chromatic");
   const [a4, setA4] = useState(440);
   const [range, setRange] = useState<TunerRange>("guitar");
@@ -56,21 +58,21 @@ export function TunerPanel({ active }: TunerPanelProps) {
 
   const activeLane = lanes?.find((lane) => Math.abs(lane.cents) <= 50) ?? null;
 
+  const modeTabs = [
+    ["chromatic", t("tuner.chromatic")],
+    ["guitar", t("tuner.guitar")],
+    ["octave", t("tuner.octaves")],
+  ] as const;
+
   return (
     <section className="tuner" aria-label="Tuner CubeControl">
       <header className="tuner__head">
         <div>
           <h2 className="tuner__title">Tuner</h2>
-          <p className="tuner__sub">McLeod · audio interface / mic · octavas estables</p>
+          <p className="tuner__sub">{t("tuner.subtitle")}</p>
         </div>
-        <div className="tuner__modes" role="tablist" aria-label="Modo tuner">
-          {(
-            [
-              ["chromatic", "Cromático"],
-              ["guitar", "Guitarra"],
-              ["octave", "Octavar"],
-            ] as const
-          ).map(([id, label]) => (
+        <div className="tuner__modes" role="tablist" aria-label={t("tuner.mode")}>
+          {modeTabs.map(([id, label]) => (
             <button
               key={id}
               type="button"
@@ -87,12 +89,14 @@ export function TunerPanel({ active }: TunerPanelProps) {
 
       <div className="tuner__controls">
         <label className="tuner__field">
-          <span>Entrada</span>
+          <span>{t("tuner.input")}</span>
           <select
             value={deviceIdOrEmpty(tuner.deviceId)}
             onChange={(event) => tuner.setDeviceId(event.target.value)}
           >
-            {tuner.devices.length === 0 ? <option value="">Micrófono por defecto</option> : null}
+            {tuner.devices.length === 0 ? (
+              <option value="">{t("tuner.defaultMic")}</option>
+            ) : null}
             {tuner.devices.map((device) => (
               <option key={device.deviceId} value={device.deviceId}>
                 {device.label || `Input ${device.deviceId.slice(0, 6)}`}
@@ -102,11 +106,11 @@ export function TunerPanel({ active }: TunerPanelProps) {
         </label>
 
         <label className="tuner__field">
-          <span>Rango</span>
+          <span>{t("tuner.range")}</span>
           <select value={range} onChange={(event) => setRange(event.target.value as TunerRange)}>
-            <option value="guitar">Guitarra</option>
-            <option value="bass">Bajo / octava grave</option>
-            <option value="wide">Amplio (octavar)</option>
+            <option value="guitar">{t("tuner.guitar")}</option>
+            <option value="bass">{t("tuner.bass")}</option>
+            <option value="wide">{t("tuner.wide")}</option>
           </select>
         </label>
 
@@ -130,7 +134,7 @@ export function TunerPanel({ active }: TunerPanelProps) {
             else void tuner.start();
           }}
         >
-          {tuner.listening ? "Escuchando" : "Iniciar mic"}
+          {tuner.listening ? t("tuner.listening") : t("tuner.startMic")}
         </button>
       </div>
 
@@ -152,13 +156,17 @@ export function TunerPanel({ active }: TunerPanelProps) {
               <p className={`tuner__cents${inTune(note.cents) ? " is-ok" : ""}`}>
                 {note.cents >= 0 ? "+" : ""}
                 {note.cents.toFixed(1)} cents
-                {inTune(note.cents) ? " · afinado" : note.cents > 0 ? " · agudo" : " · grave"}
+                {inTune(note.cents)
+                  ? t("tuner.inTune")
+                  : note.cents > 0
+                    ? t("tuner.sharp")
+                    : t("tuner.flat")}
               </p>
               <ClarityBar clarity={tuner.reading?.clarity ?? 0} />
             </>
           ) : (
             <p className="tuner__waiting">
-              {tuner.listening ? "Toca una nota limpia…" : "Activa el mic para afinar"}
+              {tuner.listening ? t("tuner.playNote") : t("tuner.enableMic")}
             </p>
           )}
         </div>
@@ -175,7 +183,7 @@ export function TunerPanel({ active }: TunerPanelProps) {
                 checked={autoLock}
                 onChange={(event) => setAutoLock(event.target.checked)}
               />
-              Auto-lock raíz
+              {t("tuner.autoLock")}
             </label>
             <button
               type="button"
@@ -200,7 +208,7 @@ export function TunerPanel({ active }: TunerPanelProps) {
                 Root MIDI {lockedRootMidi} · {noteNameFromMidi(lockedRootMidi)}
               </span>
             ) : (
-              <span className="tuner__lock">Sin raíz — toca y bloquea</span>
+              <span className="tuner__lock">{t("tuner.noRoot")}</span>
             )}
           </div>
 
@@ -232,10 +240,7 @@ export function TunerPanel({ active }: TunerPanelProps) {
               );
             })}
           </div>
-          <p className="tuner__octave-hint">
-            Útil con octavadores: bloquea la nota base y verifica −1 / root / +1 sin perder la
-            octava.
-          </p>
+          <p className="tuner__octave-hint">{t("tuner.octHint")}</p>
         </div>
       ) : null}
     </section>
@@ -281,8 +286,9 @@ function Needle({ cents, live }: { readonly cents: number; readonly live: boolea
 }
 
 function ClarityBar({ clarity }: { readonly clarity: number }) {
+  const { t } = useI18n();
   return (
-    <div className="tuner__clarity" title="Claridad de pitch">
+    <div className="tuner__clarity" title={t("tuner.clarity")}>
       <div className="tuner__clarity-fill" style={{ width: `${Math.round(clarity * 100)}%` }} />
     </div>
   );

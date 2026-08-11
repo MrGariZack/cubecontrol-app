@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useAudioSpectrum } from "../../audio/useAudioSpectrum";
+import { useI18n } from "../../i18n";
 import "./signal-scope.css";
 
 type SignalScopeProps = {
@@ -34,6 +35,7 @@ const TOUCH_LEVEL = 0.3;
  * OLED-style frequency rail above the virtual pedal — with a tiny cube runner.
  */
 export function SignalScope({ active = true }: SignalScopeProps) {
+  const { t, locale } = useI18n();
   const [enabled, setEnabled] = useState(true);
   const [play, setPlay] = useState(true);
   const [laps, setLaps] = useState(0);
@@ -209,10 +211,10 @@ export function SignalScope({ active = true }: SignalScopeProps) {
         const barH = level * (h * 0.72);
         const y = h - barH - 6 * dpr;
 
-        const t = i / Math.max(1, n - 1);
-        const r = Math.floor(40 + t * 40 + level * 120);
-        const g = Math.floor(160 + (1 - t) * 40 + level * 60);
-        const b = Math.floor(170 - t * 80 + level * 40);
+        const pos = i / Math.max(1, n - 1);
+        const r = Math.floor(40 + pos * 40 + level * 120);
+        const g = Math.floor(160 + (1 - pos) * 40 + level * 60);
+        const b = Math.floor(170 - pos * 80 + level * 40);
         const grad = ctx.createLinearGradient(x, y, x, h);
         grad.addColorStop(0, `rgba(${r},${g},${b},0.95)`);
         grad.addColorStop(1, `rgba(${r},${g},${b},0.15)`);
@@ -304,12 +306,12 @@ export function SignalScope({ active = true }: SignalScopeProps) {
           ctx.fillStyle = `rgba(255, 214, 120, ${0.55 + pulse * 0.4})`;
           ctx.font = `bold ${11 * dpr}px "IBM Plex Mono", Consolas, monospace`;
           ctx.textAlign = "center";
-          ctx.fillText(`¡VUELTA ${run.laps}!`, w / 2, 18 * dpr);
+          ctx.fillText(t("scope.lap", { n: run.laps }), w / 2, 18 * dpr);
         } else if (run.blocked) {
           ctx.fillStyle = "rgba(255, 160, 140, 0.55)";
           ctx.font = `${9 * dpr}px "IBM Plex Mono", Consolas, monospace`;
           ctx.textAlign = "center";
-          ctx.fillText("bloqueado — ¡esa barra!", cubeX, cubeY - 16 * dpr);
+          ctx.fillText(t("scope.blocked"), cubeX, cubeY - 16 * dpr);
         }
       }
 
@@ -334,20 +336,20 @@ export function SignalScope({ active = true }: SignalScopeProps) {
 
     raf = requestAnimationFrame(draw);
     return () => cancelAnimationFrame(raf);
-  }, [error, frameRef, listening]);
+  }, [error, frameRef, listening, locale, t]);
 
   return (
-    <div className="signal-scope" aria-label="Analizador de señal">
+    <div className="signal-scope" aria-label={t("scope.title")}>
       <div className="signal-scope__meta">
         <span className="signal-scope__tag">SCOPE</span>
         <span className="signal-scope__hz">
-          {play ? `cubo · vuelta ${laps}` : "20 Hz — 8 kHz"}
+          {play ? t("scope.cubeLap", { n: laps }) : "20 Hz — 8 kHz"}
         </span>
         <button
           type="button"
           className={play ? "signal-scope__btn is-on" : "signal-scope__btn"}
           onClick={() => setPlay((v) => !v)}
-          title="El cubo solo salta si la barra debajo lo toca; las barras altas lo bloquean"
+          title={t("scope.hint")}
         >
           {play ? "RUN" : "IDLE"}
         </button>
@@ -362,7 +364,7 @@ export function SignalScope({ active = true }: SignalScopeProps) {
       <div className="signal-scope__panel">
         <canvas ref={canvasRef} className="signal-scope__canvas" />
         {error ? (
-          <p className="signal-scope__error">Permite el micrófono para el scope · {error}</p>
+          <p className="signal-scope__error">{t("scope.micDenied", { error })}</p>
         ) : null}
       </div>
     </div>

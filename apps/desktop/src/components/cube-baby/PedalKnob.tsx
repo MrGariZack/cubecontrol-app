@@ -4,6 +4,7 @@ import {
   LIVE_PARAM_MODULATION_OFF,
   type LiveParamName,
 } from "@tonehub/cube-baby-protocol";
+import { useI18n } from "../../i18n";
 
 export type PedalKnobTone = "volume" | "cab" | "delay" | "drive";
 
@@ -79,6 +80,7 @@ export function PedalKnob({
   disabled = false,
   onChange,
 }: PedalKnobProps) {
+  const { t } = useI18n();
   const dragRef = useRef<{
     pointerId: number;
     startY: number;
@@ -139,13 +141,13 @@ export function PedalKnob({
     .join(" ");
 
   const offReason = !sectionOn
-    ? `${label}: sección apagada`
+    ? t("pedal.sectionOff", { label })
     : effectOff && !atOffStop
-      ? `${label}: OFF (Mix en 0 apaga Mix/FB/Time)`
+      ? t("pedal.mixOff", { label })
       : atOffStop
         ? bipolarCenterOff
-          ? `${label}: OFF (centro 7–8)`
-          : `${label}: OFF (tope mínimo)`
+          ? t("pedal.centerOff", { label })
+          : t("pedal.minOff", { label })
         : `${label}: ${clamped}`;
 
   return (
@@ -165,7 +167,7 @@ export function PedalKnob({
         aria-valuemax={max}
         aria-valuenow={clamped}
         aria-valuetext={
-          !sectionOn ? "sección off" : visuallyOff ? "off" : String(clamped)
+          !sectionOn ? t("pedal.sectionOffShort") : visuallyOff ? "off" : String(clamped)
         }
         tabIndex={disabled ? -1 : 0}
         onPointerDown={(event) => {

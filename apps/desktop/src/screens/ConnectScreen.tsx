@@ -1,11 +1,14 @@
 import { useEffect, useRef, useState } from "react";
+import { useI18n } from "../i18n";
 import type { DesktopConnectionInfo } from "../types/device";
+import { LanguageSwitcher } from "../components/LanguageSwitcher";
 
 type ConnectScreenProps = {
   readonly onConnected: (info: DesktopConnectionInfo) => void;
 };
 
 export function ConnectScreen({ onConnected }: ConnectScreenProps) {
+  const { t, locale } = useI18n();
   const [phase, setPhase] = useState<"idle" | "connecting" | "error">("idle");
   const [error, setError] = useState<string | null>(null);
   const [portsHint, setPortsHint] = useState("");
@@ -32,11 +35,11 @@ export function ConnectScreen({ onConnected }: ConnectScreenProps) {
       const confirmed = ports.filter((port) => port.cubeBabyMatch === "confirmed");
       setPortsHint(
         confirmed.length > 0
-          ? `${confirmed.length} puerto(s) CUBE Baby USB detectado(s)`
-          : "Pedal no detectado — conecta USB y cierra CubeSuite",
+          ? t("connect.portsFound", { count: confirmed.length })
+          : t("connect.portsMissing"),
       );
     });
-  }, []);
+  }, [t, locale]);
 
   async function onConnect() {
     if (phase === "connecting") return;
@@ -54,18 +57,16 @@ export function ConnectScreen({ onConnected }: ConnectScreenProps) {
 
   return (
     <main className="connect">
+      <div className="connect__lang">
+        <LanguageSwitcher />
+      </div>
       <div ref={signalRef} className="connect__signal" />
       <div ref={brandRef}>
         <h1 className="connect__brand">CubeControl</h1>
-        <p className="connect__headline">Control live para CUBE Baby</p>
-        <p className="connect__support">
-          Conecta por USB para editar Drive, Delay, Reverb, Mod, Cabinet y Output en tiempo real.
-        </p>
+        <p className="connect__headline">{t("connect.headline")}</p>
+        <p className="connect__support">{t("connect.support")}</p>
         <p className="connect__hint">{portsHint}</p>
-        <p className="connect__safety">
-          Software no oficial · sin garantía · IR preferible en Cab 8 · exporta bank antes de
-          experimentos. Ya aceptaste el aviso de riesgos en este equipo.
-        </p>
+        <p className="connect__safety">{t("connect.safety")}</p>
       </div>
       <div className="connect__actions">
         <button
@@ -74,7 +75,7 @@ export function ConnectScreen({ onConnected }: ConnectScreenProps) {
           onClick={() => void onConnect()}
           disabled={phase === "connecting"}
         >
-          {phase === "connecting" ? "Conectando…" : "Conectar USB"}
+          {phase === "connecting" ? t("connect.connecting") : t("connect.cta")}
         </button>
         {phase === "error" && error ? <p className="connect__error">{error}</p> : null}
       </div>

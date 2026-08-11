@@ -221,10 +221,6 @@ export function CubeBabyPedal({
           />
         </div>
       </div>
-
-      <p className="cube-stage__hint">
-        Mix en 0 apaga Mix/FB/Time · LED o pad activo apaga el grupo · A/B/C cambia slot
-      </p>
     </div>
   );
 }

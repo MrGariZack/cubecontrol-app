@@ -1,4 +1,5 @@
 import type { PresetSlotId } from "@tonehub/cube-baby-protocol";
+import { useI18n } from "../i18n";
 
 const ALL_SLOTS: readonly PresetSlotId[] = ["A", "B", "C"];
 
@@ -31,6 +32,7 @@ export function StudioToolbar({
   onCopyTo,
   onOpenShow,
 }: StudioToolbarProps) {
+  const { t } = useI18n();
   const copyTargets = ALL_SLOTS.filter((slot) => slot !== activeSlot);
 
   return (
@@ -41,18 +43,18 @@ export function StudioToolbar({
           className="studio-toolbar__btn"
           disabled={busy || !canUndo}
           onClick={onUndo}
-          title="Undo"
+          title={t("toolbar.undo")}
         >
-          Undo
+          {t("toolbar.undo")}
         </button>
         <button
           type="button"
           className="studio-toolbar__btn"
           disabled={busy || !canRedo}
           onClick={onRedo}
-          title="Redo"
+          title={t("toolbar.redo")}
         >
-          Redo
+          {t("toolbar.redo")}
         </button>
         <span className="studio-toolbar__divider" aria-hidden />
         <button
@@ -61,10 +63,10 @@ export function StudioToolbar({
           disabled={busy}
           onClick={onSave}
         >
-          Save {activeSlot}
+          {t("toolbar.saveSlot", { slot: activeSlot })}
         </button>
-        <span className="studio-toolbar__copy" aria-label="Copiar live a otro footswitch">
-          <span className="studio-toolbar__copy-label">Copiar a</span>
+        <span className="studio-toolbar__copy" aria-label={t("toolbar.copyAria")}>
+          <span className="studio-toolbar__copy-label">{t("toolbar.copyTo")}</span>
           {copyTargets.map((slot) => (
             <button
               key={slot}
@@ -72,14 +74,14 @@ export function StudioToolbar({
               className="studio-toolbar__btn"
               disabled={busy}
               onClick={() => onCopyTo(slot)}
-              title={`Copia el tono live actual al slot ${slot} y cambia a ${slot}`}
+              title={t("toolbar.copyTitle", { slot })}
             >
               {slot}
             </button>
           ))}
         </span>
         <button type="button" className="studio-toolbar__btn" disabled={busy} onClick={onCompare}>
-          Compare
+          {t("toolbar.compare")}
         </button>
         {activeShowLabel && onOpenShow ? (
           <button
@@ -87,14 +89,14 @@ export function StudioToolbar({
             className="studio-toolbar__btn studio-toolbar__show"
             disabled={busy}
             onClick={onOpenShow}
-            title="Abrir show activo"
+            title={t("toolbar.openShow")}
           >
             {activeShowLabel}
           </button>
         ) : null}
       </div>
       <p className="studio-toolbar__status" aria-live="polite">
-        {status ?? "Ready"}
+        {status ?? t("common.ready")}
       </p>
     </header>
   );

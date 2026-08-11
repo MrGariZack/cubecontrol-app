@@ -58,6 +58,13 @@ button:disabled {
     linear-gradient(160deg, #10151c 0%, var(--bg-0) 48%, #050607 100%);
 }
 
+.connect__lang {
+  position: absolute;
+  top: 20px;
+  right: 24px;
+  z-index: 2;
+}
+
 .connect__signal {
   position: absolute;
   width: 420px;

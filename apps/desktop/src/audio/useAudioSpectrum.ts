@@ -54,7 +54,7 @@ export function useAudioSpectrum(options: { readonly active: boolean; readonly b
       setError(null);
       try {
         if (!navigator.mediaDevices?.getUserMedia) {
-          throw new Error("Sin acceso a micrófono en este entorno");
+          throw new Error("No microphone access in this environment");
         }
         const stream = await navigator.mediaDevices.getUserMedia({
           audio: {

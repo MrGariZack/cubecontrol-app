@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import type { PresetSlotId } from "@tonehub/cube-baby-protocol";
 import type { ShowLibraryItem, SongLibraryItem } from "../../electron/library/types";
+import { useI18n } from "../i18n";
 import "./stage-mode.css";
 
 type StageModeProps = {
@@ -24,6 +25,7 @@ export function StageMode({
   onAssignSongToSlot,
   onExit,
 }: StageModeProps) {
+  const { t } = useI18n();
   const ordered = show.songIds
     .map((id) => songs.find((s) => s.id === id))
     .filter((s): s is SongLibraryItem => s !== undefined);
@@ -74,32 +76,32 @@ export function StageMode({
   ]);
 
   return (
-    <div className="stage" role="application" aria-label={`Escenario · ${show.name}`}>
+    <div className="stage" role="application" aria-label={t("stage.title", { name: show.name })}>
       <header className="stage__bar">
         <p className="stage__show">{show.name}</p>
         <p className="stage__count" aria-live="polite">
           {ordered.length === 0
-            ? "Sin temas"
+            ? t("stage.noTracks")
             : `${Math.min(songIndex + 1, ordered.length)} / ${ordered.length}`}
         </p>
         <button type="button" className="stage__exit" onClick={onExit} disabled={busy}>
-          Salir
+          {t("stage.exit")}
         </button>
       </header>
 
       <div className="stage__center">
         {current === null ? (
-          <p className="stage__empty">Este show no tiene canciones</p>
+          <p className="stage__empty">{t("stage.empty")}</p>
         ) : (
           <>
-            <p className="stage__now-label">Ahora</p>
+            <p className="stage__now-label">{t("stage.now")}</p>
             <h1 className="stage__now">{current.name}</h1>
             {next ? (
               <p className="stage__next">
-                Siguiente · <span>{next.name}</span>
+                {t("stage.next")} <span>{next.name}</span>
               </p>
             ) : (
-              <p className="stage__next">Fin del set</p>
+              <p className="stage__next">{t("stage.end")}</p>
             )}
           </>
         )}
@@ -112,7 +114,7 @@ export function StageMode({
           disabled={busy || !prev}
           onClick={() => onSongIndexChange(Math.max(0, songIndex - 1))}
         >
-          Anterior
+          {t("stage.prev")}
         </button>
         <button
           type="button"
@@ -120,14 +122,14 @@ export function StageMode({
           disabled={busy || !current}
           onClick={() => current && void onApplySong(current)}
         >
-          Aplicar live
+          {t("stage.applyLive")}
         </button>
         <button
           type="button"
           className="stage__btn"
           disabled={busy || !current}
           onClick={() => current && void onAssignSongToSlot(current, "A")}
-          aria-label="Asignar al foot A"
+          aria-label={t("stage.assignFoot", { slot: "A" })}
         >
           → A
         </button>
@@ -136,7 +138,7 @@ export function StageMode({
           className="stage__btn"
           disabled={busy || !current}
           onClick={() => current && void onAssignSongToSlot(current, "B")}
-          aria-label="Asignar al foot B"
+          aria-label={t("stage.assignFoot", { slot: "B" })}
         >
           → B
         </button>
@@ -145,7 +147,7 @@ export function StageMode({
           className="stage__btn"
           disabled={busy || !current}
           onClick={() => current && void onAssignSongToSlot(current, "C")}
-          aria-label="Asignar al foot C"
+          aria-label={t("stage.assignFoot", { slot: "C" })}
         >
           → C
         </button>
@@ -155,13 +157,11 @@ export function StageMode({
           disabled={busy || !next}
           onClick={() => onSongIndexChange(Math.min(ordered.length - 1, songIndex + 1))}
         >
-          Siguiente
+          {t("stage.nextBtn")}
         </button>
       </div>
 
-      <p className="stage__hints">
-        Teclado: ← → cambiar · Enter aplicar · A B C foot · Esc salir
-      </p>
+      <p className="stage__hints">{t("stage.keys")}</p>
     </div>
   );
 }

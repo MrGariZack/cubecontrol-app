@@ -1,5 +1,6 @@
 import { clearSafetyAcceptance } from "../safety/disclaimer";
 import { useConfirmDialog } from "../hooks/useConfirmDialog";
+import { useI18n } from "../i18n";
 import { MicDistanceRail } from "./cube-baby/MicDistanceRail";
 import "./device-workspace.css";
 
@@ -32,16 +33,15 @@ export function DeviceWorkspace({
   onImportBank,
   onCompare,
 }: DeviceWorkspaceProps) {
+  const { t } = useI18n();
   const { confirm, dialog: confirmDialog } = useConfirmDialog();
 
   return (
-    <div className="dev-ws" aria-label="Device · Bank e IR">
+    <div className="dev-ws" aria-label={t("device.aria")}>
       <header className="dev-ws__top">
         <div>
-          <h1 className="dev-ws__title">Device</h1>
-          <p className="dev-ws__subtitle">
-            Bank A+B+C, impulso (IR) y herramientas de hardware — con aire, sin apiñar el menú
-          </p>
+          <h1 className="dev-ws__title">{t("nav.device")}</h1>
+          <p className="dev-ws__subtitle">{t("device.subtitle")}</p>
         </div>
       </header>
 
@@ -50,9 +50,7 @@ export function DeviceWorkspace({
           <h2 id="dev-bank-heading" className="dev-ws__card-title">
             Bank
           </h2>
-          <p className="dev-ws__card-copy">
-            Exporta o restaura los tres footswitches (A+B+C) como archivo JSON en tu PC.
-          </p>
+          <p className="dev-ws__card-copy">{t("device.bank.copy")}</p>
           <div className="dev-ws__actions">
             <button
               type="button"
@@ -60,7 +58,7 @@ export function DeviceWorkspace({
               disabled={busy}
               onClick={onExportBank}
             >
-              Exportar bank
+              {t("device.bank.export")}
             </button>
             <button
               type="button"
@@ -68,32 +66,29 @@ export function DeviceWorkspace({
               disabled={busy}
               onClick={onImportBank}
             >
-              Importar bank
+              {t("device.bank.import")}
             </button>
           </div>
         </section>
 
         <section className="dev-ws__card dev-ws__card--ir" aria-labelledby="dev-ir-heading">
           <h2 id="dev-ir-heading" className="dev-ws__card-title">
-            Impulse response
+            {t("device.ir.title")}
           </h2>
-          <p className="dev-ws__card-copy">
-            Carga un WAV al cabinet elegido. Cab 8 es el slot de upload seguro; 1–7 pueden ser de
-            fábrica.
-          </p>
+          <p className="dev-ws__card-copy">{t("device.ir.copy")}</p>
 
           <label className="dev-ws__field">
-            <span>Cabinet destino</span>
+            <span>{t("device.ir.cabinet")}</span>
             <select
               value={irCabinet}
               disabled={busy}
-              aria-label="Cabinet IR destino"
+              aria-label={t("device.ir.cabinetAria")}
               onChange={(event) => onIrCabinetChange(Number(event.target.value))}
             >
               {IR_CABINETS.map((cabinet) => (
                 <option key={cabinet} value={cabinet}>
                   Cab {cabinet}
-                  {cabinet === 8 ? " · upload seguro" : " · riesgo factory"}
+                  {cabinet === 8 ? t("device.ir.safe") : t("device.ir.risk")}
                 </option>
               ))}
             </select>
@@ -114,18 +109,16 @@ export function DeviceWorkspace({
               disabled={busy}
               onClick={onLoadIr}
             >
-              Cargar IR WAV
+              {t("device.ir.load")}
             </button>
           </div>
         </section>
 
         <section className="dev-ws__card" aria-labelledby="dev-levels-heading">
           <h2 id="dev-levels-heading" className="dev-ws__card-title">
-            Niveles
+            {t("device.levels.title")}
           </h2>
-          <p className="dev-ws__card-copy">
-            Compara A/B/C y iguala volúmenes entre footswitches cuando el set suena desparejo.
-          </p>
+          <p className="dev-ws__card-copy">{t("device.levels.copy")}</p>
           <div className="dev-ws__actions">
             <button
               type="button"
@@ -133,23 +126,21 @@ export function DeviceWorkspace({
               disabled={busy}
               onClick={onCompare}
             >
-              Compare / match volume
+              {t("device.levels.compare")}
             </button>
           </div>
         </section>
 
         <section className="dev-ws__card dev-ws__card--warn" aria-labelledby="dev-safety-heading">
           <h2 id="dev-safety-heading" className="dev-ws__card-title">
-            Seguridad
+            {t("device.safety.title")}
           </h2>
           <ul className="dev-ws__checklist">
-            <li>Live / knobs = riesgo bajo</li>
-            <li>Bank export/import = medio</li>
-            <li>IR ROM Cab 1–7 = alto (preferir Cab 8)</li>
+            <li>{t("device.safety.live")}</li>
+            <li>{t("device.safety.bank")}</li>
+            <li>{t("device.safety.ir")}</li>
           </ul>
-          <p className="dev-ws__card-copy">
-            Producto no oficial. Sin garantía. Detalle en <code>SAFETY.md</code>.
-          </p>
+          <p className="dev-ws__card-copy">{t("device.safety.copy")}</p>
           <div className="dev-ws__actions">
             <button
               type="button"
@@ -158,16 +149,16 @@ export function DeviceWorkspace({
               onClick={() => {
                 void (async () => {
                   const ok = await confirm({
-                    title: "Reset safety notice",
-                    body: "El aviso de riesgos volverá a mostrarse al reiniciar CubeControl.",
-                    confirmLabel: "Restablecer",
+                    title: t("device.safety.resetTitle"),
+                    body: t("device.safety.resetBody"),
+                    confirmLabel: t("common.reset"),
                   });
                   if (!ok) return;
                   clearSafetyAcceptance();
                 })();
               }}
             >
-              Reset safety notice
+              {t("device.safety.resetCta")}
             </button>
           </div>
         </section>

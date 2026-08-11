@@ -1,5 +1,7 @@
 import type { ReactNode } from "react";
 import type { PresetSlotId } from "@tonehub/cube-baby-protocol";
+import { useI18n } from "../i18n";
+import { LanguageSwitcher } from "./LanguageSwitcher";
 import { SlotSwitcher } from "./SlotSwitcher";
 
 export type StudioNavId = "editor" | "library" | "device" | "tuner" | "stage";
@@ -15,13 +17,6 @@ type StudioSidebarProps = {
   readonly children?: ReactNode;
 };
 
-const NAV_ITEMS: readonly { id: StudioNavId; label: string; hint: string }[] = [
-  { id: "editor", label: "Editor", hint: "Pedal y knobs" },
-  { id: "tuner", label: "Tuner", hint: "Afinar" },
-  { id: "library", label: "Library", hint: "Tonos · shows" },
-  { id: "device", label: "Device", hint: "Bank e IR" },
-];
-
 export function StudioSidebar({
   deviceName,
   activeSlot,
@@ -32,8 +27,16 @@ export function StudioSidebar({
   onDisconnect,
   children,
 }: StudioSidebarProps) {
+  const { t } = useI18n();
   const hideChrome = nav === "stage";
   if (hideChrome) return null;
+
+  const navItems: readonly { id: StudioNavId; label: string; hint: string }[] = [
+    { id: "editor", label: t("nav.editor"), hint: t("nav.editorHint") },
+    { id: "tuner", label: t("nav.tuner"), hint: t("nav.tunerHint") },
+    { id: "library", label: t("nav.library"), hint: t("nav.libraryHint") },
+    { id: "device", label: t("nav.device"), hint: t("nav.deviceHint") },
+  ];
 
   return (
     <aside className="studio-sidebar">
@@ -46,13 +49,13 @@ export function StudioSidebar({
       </div>
 
       <section className="studio-sidebar__section">
-        <p className="studio-sidebar__label">Footswitch</p>
+        <p className="studio-sidebar__label">{t("nav.footswitch")}</p>
         <SlotSwitcher active={activeSlot} busy={busy} onSelect={onSelectSlot} />
-        <p className="studio-sidebar__slot-meta">Live · slot {activeSlot}</p>
+        <p className="studio-sidebar__slot-meta">{t("nav.liveSlot", { slot: activeSlot })}</p>
       </section>
 
-      <nav className="studio-sidebar__nav" aria-label="Navegación estudio">
-        {NAV_ITEMS.map((item) => (
+      <nav className="studio-sidebar__nav" aria-label={t("nav.aria")}>
+        {navItems.map((item) => (
           <button
             key={item.id}
             type="button"
@@ -70,13 +73,14 @@ export function StudioSidebar({
       {children ? <div className="studio-sidebar__panel">{children}</div> : null}
 
       <div className="studio-sidebar__footer">
+        <LanguageSwitcher compact />
         <button
           type="button"
           className="studio-sidebar__disconnect"
           disabled={busy}
           onClick={onDisconnect}
         >
-          Disconnect
+          {t("nav.disconnect")}
         </button>
       </div>
     </aside>

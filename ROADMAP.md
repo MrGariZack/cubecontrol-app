@@ -16,6 +16,7 @@ Detalle de negocio: [`docs/open-core.md`](docs/open-core.md). Seguridad: [`apps/
 ## Siguiente (v0.2 · open polish)
 
 - [x] Diálogos in-app calmados para riesgo IR (menos `confirm()` nativo)  
+- [x] i18n ES/EN (inglés por defecto + selector)  
 - [ ] Import “pack → show”  
 - [ ] Tests de library store (songs/shows)  
 - [x] Documentar protocolo Distance / live bands en ToneHub research index  

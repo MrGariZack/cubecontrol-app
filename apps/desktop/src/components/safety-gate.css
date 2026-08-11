@@ -16,6 +16,13 @@
   padding: 28px 28px 24px;
   max-height: calc(100vh - 48px);
   overflow: auto;
+  position: relative;
+}
+
+.safety-gate__lang {
+  display: flex;
+  justify-content: flex-end;
+  margin: 0 0 12px;
 }
 
 .safety-gate__eyebrow {

@@ -1,4 +1,5 @@
 import { useCallback, useId, useRef, type PointerEvent as ReactPointerEvent } from "react";
+import { useI18n } from "../../i18n";
 import "./mic-distance-rail.css";
 
 type MicDistanceRailProps = {
@@ -23,11 +24,12 @@ export function MicDistanceRail({
   disabled = false,
   compact = false,
 }: MicDistanceRailProps) {
+  const { t } = useI18n();
   const id = useId();
   const trackRef = useRef<HTMLDivElement>(null);
   const dragging = useRef(false);
   const pct = Math.round(clamp01(value) * 100);
-  const t = clamp01(value);
+  const dist = clamp01(value);
 
   const setFromClientX = useCallback(
     (clientX: number) => {
@@ -65,7 +67,7 @@ export function MicDistanceRail({
 
   const nudge = (delta: number) => {
     if (disabled) return;
-    onChange(Math.round(clamp01(t + delta) * 100) / 100);
+    onChange(Math.round(clamp01(dist + delta) * 100) / 100);
   };
 
   return (
@@ -78,11 +80,11 @@ export function MicDistanceRail({
         <span id={`${id}-label`} className="mic-dist__tag">
           MIC DIST
         </span>
-        <span className="mic-dist__hint">IR · cerca ↔ sala</span>
+        <span className="mic-dist__hint">{t("mic.hint")}</span>
         <span className="mic-dist__readout" aria-live="polite">
           <span className="mic-dist__pct">{pct}</span>
           <span className="mic-dist__unit">%</span>
-          <span className="mic-dist__float">{t.toFixed(2)}</span>
+          <span className="mic-dist__float">{dist.toFixed(2)}</span>
         </span>
       </div>
 
@@ -113,18 +115,18 @@ export function MicDistanceRail({
         aria-valuemin={0}
         aria-valuemax={100}
         aria-valuenow={pct}
-        aria-valuetext={`${pct} por ciento, float ${t.toFixed(2)}`}
-        aria-label="Distancia de micrófono del IR"
+        aria-valuetext={t("mic.valueText", { pct, float: dist.toFixed(2) })}
+        aria-label={t("mic.aria")}
       >
         <div className="mic-dist__cab" aria-hidden>
           <span className="mic-dist__cab-ring mic-dist__cab-ring--outer" />
           <span className="mic-dist__cab-ring mic-dist__cab-ring--mid" />
           <span className="mic-dist__cab-ring mic-dist__cab-ring--dust" />
-          <span className="mic-dist__cab-label">CERCA</span>
+          <span className="mic-dist__cab-label">{t("mic.near")}</span>
         </div>
 
         <div className="mic-dist__path" aria-hidden>
-          <span className="mic-dist__glow" style={{ opacity: 0.18 + (1 - t) * 0.45 }} />
+          <span className="mic-dist__glow" style={{ opacity: 0.18 + (1 - dist) * 0.45 }} />
           <span className="mic-dist__ticks">
             {[0, 0.25, 0.5, 0.75, 1].map((mark) => (
               <i key={mark} style={{ left: `${mark * 100}%` }} />
@@ -134,15 +136,15 @@ export function MicDistanceRail({
           <span
             className="mic-dist__waves"
             style={{
-              opacity: 0.2 + (1 - t) * 0.55,
-              transform: `translateY(-50%) scaleX(${0.55 + (1 - t) * 0.55})`,
+              opacity: 0.2 + (1 - dist) * 0.55,
+              transform: `translateY(-50%) scaleX(${0.55 + (1 - dist) * 0.55})`,
             }}
           />
         </div>
 
         <div
           className="mic-dist__mic"
-          style={{ left: `calc(var(--mic-inset-l) + (100% - var(--mic-inset-l) - var(--mic-inset-r)) * ${t})` }}
+          style={{ left: `calc(var(--mic-inset-l) + (100% - var(--mic-inset-l) - var(--mic-inset-r)) * ${dist})` }}
           aria-hidden
         >
           <span className="mic-dist__mic-body">
@@ -152,14 +154,12 @@ export function MicDistanceRail({
         </div>
 
         <div className="mic-dist__room" aria-hidden>
-          <span className="mic-dist__room-haze" style={{ opacity: 0.15 + t * 0.55 }} />
-          <span className="mic-dist__cab-label mic-dist__cab-label--far">SALA</span>
+          <span className="mic-dist__room-haze" style={{ opacity: 0.15 + dist * 0.55 }} />
+          <span className="mic-dist__cab-label mic-dist__cab-label--far">{t("mic.far")}</span>
         </div>
       </div>
 
-      <p className="mic-dist__foot">
-        Se escribe al cargar IR · mismo float que CubeSuite Distance
-      </p>
+      <p className="mic-dist__foot">{t("mic.foot")}</p>
     </div>
   );
 }

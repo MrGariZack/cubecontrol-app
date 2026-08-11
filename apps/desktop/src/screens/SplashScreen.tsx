@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import gsap from "gsap";
 import { CubeBabyPedal } from "../components/cube-baby/CubeBabyPedal";
+import { useI18n } from "../i18n";
 import type { LiveParamsSnapshot } from "../types/device";
 import "./splash.css";
 
@@ -37,12 +38,14 @@ const SPLASH_PARAMS: LiveParamsSnapshot = {
 };
 
 export function SplashScreen({ onDone }: SplashScreenProps) {
+  const { t } = useI18n();
   const finish = useStableDone(onDone);
   const rootRef = useRef<HTMLDivElement>(null);
   const pedalRef = useRef<HTMLDivElement>(null);
   const brandRef = useRef<HTMLDivElement>(null);
   const barRef = useRef<HTMLDivElement>(null);
   const statusRef = useRef<HTMLParagraphElement>(null);
+  const readyLabel = t("splash.ready");
 
   useEffect(() => {
     const root = rootRef.current;
@@ -104,7 +107,7 @@ export function SplashScreen({ onDone }: SplashScreenProps) {
         .to(bar, { scaleX: 1, duration: 1.35, ease: "power1.inOut" }, 0.45)
         .to(status, { opacity: 0.7, duration: 0.2 }, 1.7)
         .add(() => {
-          if (status) status.textContent = "Listo";
+          if (status) status.textContent = readyLabel;
         }, 1.75)
         .to({}, { duration: 0.35 });
     }, root);
@@ -113,10 +116,10 @@ export function SplashScreen({ onDone }: SplashScreenProps) {
       if (reducedTimer !== undefined) window.clearTimeout(reducedTimer);
       ctx.revert();
     };
-  }, [finish]);
+  }, [finish, readyLabel]);
 
   return (
-    <div ref={rootRef} className="splash" role="status" aria-live="polite" aria-label="Cargando CubeControl">
+    <div ref={rootRef} className="splash" role="status" aria-live="polite" aria-label={t("splash.loading")}>
       <div className="splash__aurora" aria-hidden />
       <div className="splash__grid" aria-hidden />
 
@@ -138,7 +141,7 @@ export function SplashScreen({ onDone }: SplashScreenProps) {
 
       <div className="splash__footer">
         <p ref={statusRef} className="splash__status">
-          Encendiendo CUBE Baby…
+          {t("splash.booting")}
         </p>
         <div className="splash__bar" aria-hidden>
           <div ref={barRef} className="splash__bar-fill" />

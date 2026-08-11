@@ -1,4 +1,5 @@
 import { useEffect, useId, useRef, useState } from "react";
+import { useI18n } from "../i18n";
 import "./confirm-dialog.css";
 
 export type ConfirmTone = "default" | "warn" | "danger";
@@ -24,6 +25,7 @@ type ConfirmDialogProps = {
  * Calm in-app confirm — replaces native `window.confirm` for destructive / IR risk flows.
  */
 export function ConfirmDialog({ request, onConfirm, onCancel }: ConfirmDialogProps) {
+  const { t } = useI18n();
   const titleId = useId();
   const tone = request.tone ?? "default";
   const [typed, setTyped] = useState("");
@@ -51,6 +53,13 @@ export function ConfirmDialog({ request, onConfirm, onCancel }: ConfirmDialogPro
     };
   }, [onCancel, request.requireTyped]);
 
+  const eyebrowKey =
+    tone === "danger"
+      ? "confirm.eyebrow.danger"
+      : tone === "warn"
+        ? "confirm.eyebrow.warn"
+        : "confirm.eyebrow.default";
+
   return (
     <div className="cc-confirm" role="presentation" onMouseDown={onCancel}>
       <div
@@ -60,9 +69,7 @@ export function ConfirmDialog({ request, onConfirm, onCancel }: ConfirmDialogPro
         aria-labelledby={titleId}
         onMouseDown={(event) => event.stopPropagation()}
       >
-        <p className={`cc-confirm__eyebrow cc-confirm__eyebrow--${tone}`}>
-          {tone === "danger" ? "Riesgo alto" : tone === "warn" ? "Atención" : "Confirmar"}
-        </p>
+        <p className={`cc-confirm__eyebrow cc-confirm__eyebrow--${tone}`}>{t(eyebrowKey)}</p>
         <h2 id={titleId} className="cc-confirm__title">
           {request.title}
         </h2>
@@ -70,16 +77,14 @@ export function ConfirmDialog({ request, onConfirm, onCancel }: ConfirmDialogPro
         {request.detail ? <p className="cc-confirm__detail">{request.detail}</p> : null}
         {request.requireTyped ? (
           <label className="cc-confirm__type">
-            <span>
-              Escribe <code>{request.requireTyped}</code> para continuar
-            </span>
+            <span>{t("confirm.typePrompt", { code: request.requireTyped })}</span>
             <input
               ref={inputRef}
               value={typed}
               onChange={(event) => setTyped(event.target.value)}
               autoComplete="off"
               spellCheck={false}
-              aria-label={`Confirmar escribiendo ${request.requireTyped}`}
+              aria-label={t("confirm.typeAria", { code: request.requireTyped })}
             />
           </label>
         ) : null}
@@ -90,7 +95,7 @@ export function ConfirmDialog({ request, onConfirm, onCancel }: ConfirmDialogPro
             className="cc-confirm__btn"
             onClick={onCancel}
           >
-            {request.cancelLabel ?? "Cancelar"}
+            {request.cancelLabel ?? t("common.cancel")}
           </button>
           <button
             type="button"
@@ -98,7 +103,7 @@ export function ConfirmDialog({ request, onConfirm, onCancel }: ConfirmDialogPro
             disabled={!typedOk}
             onClick={onConfirm}
           >
-            {request.confirmLabel ?? "Continuar"}
+            {request.confirmLabel ?? t("common.continue")}
           </button>
         </div>
       </div>

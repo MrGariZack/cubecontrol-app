@@ -12,6 +12,7 @@ import { FAVORITE_TAG } from "../../electron/library/types";
 import type { LiveParamsSnapshot } from "../types/device";
 import { MicDistanceRail } from "./cube-baby/MicDistanceRail";
 import { useConfirmDialog } from "../hooks/useConfirmDialog";
+import { useI18n } from "../i18n";
 import "./library-workspace.css";
 
 export type LibrarySection = "tones" | "songs" | "shows" | "more";
@@ -105,7 +106,9 @@ export function LibraryWorkspace(props: LibraryWorkspaceProps) {
     onCabinetApplied,
   } = props;
 
+  const { t } = useI18n();
   const { confirm, dialog: confirmDialog } = useConfirmDialog();
+  const profileLabel = (p: LibraryProfile) => t(`lib.profile.${p}`);
   const [section, setSection] = useState<LibrarySection>("tones");
   const [index, setIndex] = useState<LibraryIndex>(emptyIndex());
   const [query, setQuery] = useState("");
@@ -204,7 +207,9 @@ export function LibraryWorkspace(props: LibraryWorkspaceProps) {
       setSelectedPresetId(item.id);
       setSaveSheet(null);
       onStatus(
-        sheet.mode === "update" ? `Tono actualizado · ${item.name}` : `Tono guardado · ${item.name}`,
+        sheet.mode === "update"
+          ? t("lib.toneUpdated", { name: item.name })
+          : t("lib.toneSaved", { name: item.name }),
       );
     });
   }
@@ -224,15 +229,15 @@ export function LibraryWorkspace(props: LibraryWorkspaceProps) {
 
   async function deletePreset(id: string) {
     const ok = await confirm({
-      title: "Borrar tono",
-      body: "Se elimina de la biblioteca local. El pedal no se toca.",
-      confirmLabel: "Borrar",
+      title: t("lib.deleteToneTitle"),
+      body: t("lib.deleteToneBody"),
+      confirmLabel: t("common.delete"),
     });
     if (!ok) return;
     await runBusy(async () => {
       await window.tonehubDesktop.library.deletePreset(id);
       if (selectedPresetId === id) setSelectedPresetId(null);
-      onStatus("Tono eliminado");
+      onStatus(t("lib.toneDeleted"));
     });
   }
 
@@ -249,33 +254,33 @@ export function LibraryWorkspace(props: LibraryWorkspaceProps) {
       setSongDraft(null);
       setSelectedSongId(item.id);
       setSection("songs");
-      onStatus(`Canción lista · ${item.name}`);
+      onStatus(t("lib.songReady", { name: item.name }));
     });
   }
 
   async function deleteSong(id: string) {
     const ok = await confirm({
-      title: "Borrar canción",
-      body: "Se elimina de la biblioteca. Los shows que la referencien quedarán con hueco.",
-      confirmLabel: "Borrar",
+      title: t("lib.deleteSongTitle"),
+      body: t("lib.deleteSongBody"),
+      confirmLabel: t("common.delete"),
     });
     if (!ok) return;
     await runBusy(async () => {
       await window.tonehubDesktop.library.deleteSong(id);
       if (selectedSongId === id) setSelectedSongId(null);
-      onStatus("Canción eliminada");
+      onStatus(t("lib.songDeleted"));
     });
   }
 
   async function createShow() {
     await runBusy(async () => {
       const item = await window.tonehubDesktop.library.saveShow({
-        name: `Show ${index.shows.length + 1}`,
+        name: t("lib.showNameDefault", { n: index.shows.length + 1 }),
         songIds: [],
       });
       setSelectedShowId(item.id);
       onActiveShowChange(item.id, 0);
-      onStatus(`Show creado · ${item.name}`);
+      onStatus(t("lib.showCreated", { name: item.name }));
     });
   }
 
@@ -303,16 +308,16 @@ export function LibraryWorkspace(props: LibraryWorkspaceProps) {
 
   async function deleteShow(id: string) {
     const ok = await confirm({
-      title: "Borrar show",
-      body: "Se elimina el cue sheet local. Las canciones no se borran.",
-      confirmLabel: "Borrar",
+      title: t("lib.deleteShowTitle"),
+      body: t("lib.deleteShowBody"),
+      confirmLabel: t("common.delete"),
     });
     if (!ok) return;
     await runBusy(async () => {
       await window.tonehubDesktop.library.deleteShow(id);
       if (selectedShowId === id) setSelectedShowId(null);
       if (activeShowId === id) onActiveShowChange(null);
-      onStatus("Show eliminado");
+      onStatus(t("lib.showDeleted"));
     });
   }
 
@@ -354,25 +359,25 @@ export function LibraryWorkspace(props: LibraryWorkspaceProps) {
         wav,
         profile: "otro",
       });
-      onStatus(`IR importado · ${item.name}`);
+      onStatus(t("lib.irImported", { name: item.name }));
     });
   }
 
   async function loadIr(item: IrLibraryItem) {
     if (irCabinet !== 8) {
       const ok = await confirm({
-        title: `«${item.name}» → Cab ${irCabinet}`,
-        body: "Puede pisar IR de fábrica. Prefiere Cab 8.",
+        title: t("lib.irLoadTitle", { name: item.name, cab: irCabinet }),
+        body: t("lib.irLoadBody"),
         tone: "danger",
-        confirmLabel: "Seguir",
+        confirmLabel: t("common.follow"),
       });
       if (!ok) return;
       const ok2 = await confirm({
-        title: "Última confirmación",
-        body: `¿Sobreescribir Cab ${irCabinet}?`,
+        title: t("lib.irLastTitle"),
+        body: t("lib.irLastBody", { cab: irCabinet }),
         tone: "danger",
         requireTyped: `CAB${irCabinet}`,
-        confirmLabel: "Escribir IR",
+        confirmLabel: t("lib.irWrite"),
       });
       if (!ok2) return;
     }
@@ -382,7 +387,9 @@ export function LibraryWorkspace(props: LibraryWorkspaceProps) {
         distance: irDistance,
       });
       onCabinetApplied(result.cabinet);
-      onStatus(`IR → Cab ${result.cabinet} · dist ${Math.round(irDistance * 100)}%`);
+      onStatus(
+        t("lib.irApplied", { cab: result.cabinet, pct: Math.round(irDistance * 100) }),
+      );
     });
   }
 
@@ -391,24 +398,28 @@ export function LibraryWorkspace(props: LibraryWorkspaceProps) {
     await runBusy(async () => {
       const pack = await window.tonehubDesktop.library.exportShowAsPack(selectedShow.id);
       const exported = await window.tonehubDesktop.library.exportPack(pack.id);
-      onStatus(exported ? `Show exportado · ${exported.path}` : "Exportación cancelada");
+      onStatus(
+        exported
+          ? t("lib.showExported", { path: exported.path })
+          : t("lib.exportCancelled"),
+      );
     });
   }
 
   return (
-    <div className="lib-ws" aria-label="Biblioteca CubeControl">
+    <div className="lib-ws" aria-label={t("lib.aria")}>
       <header className="lib-ws__top">
         <div className="lib-ws__brand">
-          <h1 className="lib-ws__title">Biblioteca</h1>
-          <p className="lib-ws__subtitle">Tonos, canciones y shows — sin apiñar el pedal</p>
+          <h1 className="lib-ws__title">{t("lib.title")}</h1>
+          <p className="lib-ws__subtitle">{t("lib.subtitle")}</p>
         </div>
-        <nav className="lib-ws__nav" aria-label="Secciones biblioteca">
+        <nav className="lib-ws__nav" aria-label={t("lib.navAria")}>
           {(
             [
-              ["tones", "Tonos"],
-              ["songs", "Canciones"],
-              ["shows", "Shows"],
-              ["more", "Más"],
+              ["tones", t("lib.tones")],
+              ["songs", t("lib.songs")],
+              ["shows", t("lib.shows")],
+              ["more", t("lib.more")],
             ] as const
           ).map(([id, label]) => (
             <button
@@ -428,28 +439,28 @@ export function LibraryWorkspace(props: LibraryWorkspaceProps) {
           <>
             <aside className="lib-ws__list-pane">
               <label className="lib-ws__search">
-                <span className="visually-hidden">Buscar tonos</span>
+                <span className="visually-hidden">{t("lib.searchTones")}</span>
                 <input
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
-                  placeholder="Buscar tonos…"
+                  placeholder={t("lib.searchTonesPh")}
                   disabled={busy}
                 />
               </label>
-              <div className="lib-ws__chips" role="group" aria-label="Filtros">
+              <div className="lib-ws__chips" role="group" aria-label={t("lib.filters")}>
                 <button
                   type="button"
                   className={profileFilter === "all" ? "lib-ws__chip is-on" : "lib-ws__chip"}
                   onClick={() => setProfileFilter("all")}
                 >
-                  Todos
+                  {t("common.all")}
                 </button>
                 <button
                   type="button"
                   className={profileFilter === "favorites" ? "lib-ws__chip is-on" : "lib-ws__chip"}
                   onClick={() => setProfileFilter("favorites")}
                 >
-                  Favoritos
+                  {t("common.favorites")}
                 </button>
                 {PROFILES.map((p) => (
                   <button
@@ -458,7 +469,7 @@ export function LibraryWorkspace(props: LibraryWorkspaceProps) {
                     className={profileFilter === p ? "lib-ws__chip is-on" : "lib-ws__chip"}
                     onClick={() => setProfileFilter(p)}
                   >
-                    {p}
+                    {profileLabel(p)}
                   </button>
                 ))}
               </div>
@@ -477,13 +488,13 @@ export function LibraryWorkspace(props: LibraryWorkspaceProps) {
                         {p.name}
                       </span>
                       <span className="lib-ws__row-meta">
-                        {p.profile} · {formatDate(p.updatedAt)}
+                        {profileLabel(p.profile)} · {formatDate(p.updatedAt)}
                       </span>
                     </button>
                   </li>
                 ))}
                 {filteredPresets.length === 0 ? (
-                  <li className="lib-ws__empty">Ningún tono coincide</li>
+                  <li className="lib-ws__empty">{t("lib.noToneMatch")}</li>
                 ) : null}
               </ul>
               <div className="lib-ws__list-actions">
@@ -494,27 +505,25 @@ export function LibraryWorkspace(props: LibraryWorkspaceProps) {
                   onClick={() =>
                     setSaveSheet({
                       mode: "new",
-                      name: "Mi tono",
+                      name: t("lib.myTone"),
                       profile: "ensayo",
                       notes: "",
                       tags: "",
                     })
                   }
                 >
-                  Guardar live aquí
+                  {t("lib.saveLiveHere")}
                 </button>
               </div>
             </aside>
             <main className="lib-ws__detail">
               {selectedPreset === null ? (
-                <p className="lib-ws__placeholder">
-                  Elige un tono o guarda el live actual. Un solo clic para aplicar al pedal.
-                </p>
+                <p className="lib-ws__placeholder">{t("lib.tonePickHint")}</p>
               ) : (
                 <div className="lib-ws__detail-card">
                   <h2 className="lib-ws__detail-title">{selectedPreset.name}</h2>
                   <p className="lib-ws__detail-meta">
-                    {selectedPreset.profile}
+                    {profileLabel(selectedPreset.profile)}
                     {selectedPreset.notes ? ` · ${selectedPreset.notes}` : ""}
                   </p>
                   <div className="lib-ws__detail-actions">
@@ -523,10 +532,13 @@ export function LibraryWorkspace(props: LibraryWorkspaceProps) {
                       className="lib-ws__primary lib-ws__primary--lg"
                       disabled={busy}
                       onClick={() =>
-                        void onApplyPreset(selectedPreset.params, `tono · ${selectedPreset.name}`)
+                        void onApplyPreset(
+                          selectedPreset.params,
+                          t("lib.toneMeta", { date: selectedPreset.name }),
+                        )
                       }
                     >
-                      Aplicar al live
+                      {t("lib.applyLive")}
                     </button>
                     <button
                       type="button"
@@ -534,7 +546,7 @@ export function LibraryWorkspace(props: LibraryWorkspaceProps) {
                       disabled={busy}
                       onClick={() => void toggleFavorite(selectedPreset)}
                     >
-                      {isFavorite(selectedPreset.tags) ? "Quitar favorito" : "Favorito"}
+                      {isFavorite(selectedPreset.tags) ? t("lib.unfavorite") : t("lib.favorite")}
                     </button>
                     <button
                       type="button"
@@ -547,11 +559,11 @@ export function LibraryWorkspace(props: LibraryWorkspaceProps) {
                           name: selectedPreset.name,
                           profile: selectedPreset.profile,
                           notes: selectedPreset.notes,
-                          tags: selectedPreset.tags.filter((t) => t !== FAVORITE_TAG).join(", "),
+                          tags: selectedPreset.tags.filter((tag) => tag !== FAVORITE_TAG).join(", "),
                         })
                       }
                     >
-                      Actualizar con live
+                      {t("lib.updateWithLive")}
                     </button>
                     <button
                       type="button"
@@ -559,7 +571,7 @@ export function LibraryWorkspace(props: LibraryWorkspaceProps) {
                       disabled={busy}
                       onClick={() => void deletePreset(selectedPreset.id)}
                     >
-                      Borrar
+                      {t("common.delete")}
                     </button>
                   </div>
                 </div>
@@ -572,11 +584,11 @@ export function LibraryWorkspace(props: LibraryWorkspaceProps) {
           <>
             <aside className="lib-ws__list-pane">
               <label className="lib-ws__search">
-                <span className="visually-hidden">Buscar canciones</span>
+                <span className="visually-hidden">{t("lib.searchSongs")}</span>
                 <input
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
-                  placeholder="Buscar canciones…"
+                  placeholder={t("lib.searchSongsPh")}
                   disabled={busy}
                 />
               </label>
@@ -593,13 +605,15 @@ export function LibraryWorkspace(props: LibraryWorkspaceProps) {
                         onClick={() => setSelectedSongId(s.id)}
                       >
                         <span className="lib-ws__row-title">{s.name}</span>
-                        <span className="lib-ws__row-meta">{tone?.name ?? "tono ausente"}</span>
+                        <span className="lib-ws__row-meta">
+                          {tone?.name ?? t("lib.missingTone")}
+                        </span>
                       </button>
                     </li>
                   );
                 })}
                 {filteredSongs.length === 0 ? (
-                  <li className="lib-ws__empty">Crea una canción desde un tono</li>
+                  <li className="lib-ws__empty">{t("lib.createSongHint")}</li>
                 ) : null}
               </ul>
               <div className="lib-ws__list-actions">
@@ -610,14 +624,14 @@ export function LibraryWorkspace(props: LibraryWorkspaceProps) {
                   onClick={() =>
                     setSongDraft({
                       step: 1,
-                      name: "Nueva canción",
+                      name: t("lib.newSong"),
                       presetId: index.presets[0]?.id ?? "",
                       irId: "",
                       notes: "",
                     })
                   }
                 >
-                  Nueva canción
+                  {t("lib.newSong")}
                 </button>
               </div>
             </aside>
@@ -625,12 +639,12 @@ export function LibraryWorkspace(props: LibraryWorkspaceProps) {
               {songDraft !== null ? (
                 <div className="lib-ws__detail-card">
                   <h2 className="lib-ws__detail-title">
-                    {songDraft.step === 1 ? "1 · Elige el tono" : "2 · IR opcional"}
+                    {songDraft.step === 1 ? t("lib.songStep1") : t("lib.songStep2")}
                   </h2>
                   {songDraft.step === 1 ? (
                     <>
                       <label className="lib-ws__field">
-                        Nombre
+                        {t("common.name")}
                         <input
                           value={songDraft.name}
                           onChange={(e) => setSongDraft({ ...songDraft, name: e.target.value })}
@@ -659,22 +673,20 @@ export function LibraryWorkspace(props: LibraryWorkspaceProps) {
                           className="lib-ws__primary"
                           onClick={() => setSongDraft({ ...songDraft, step: 2 })}
                         >
-                          Siguiente
+                          {t("common.next")}
                         </button>
                         <button
                           type="button"
                           className="lib-ws__ghost"
                           onClick={() => setSongDraft(null)}
                         >
-                          Cancelar
+                          {t("common.cancel")}
                         </button>
                       </div>
                     </>
                   ) : (
                     <>
-                      <p className="lib-ws__detail-meta">
-                        Puedes saltar el IR. Distance se guarda con la canción.
-                      </p>
+                      <p className="lib-ws__detail-meta">{t("lib.songIrSkip")}</p>
                       <ul className="lib-ws__pick">
                         <li>
                           <button
@@ -684,7 +696,7 @@ export function LibraryWorkspace(props: LibraryWorkspaceProps) {
                             }
                             onClick={() => setSongDraft({ ...songDraft, irId: "" })}
                           >
-                            <span className="lib-ws__row-title">Sin IR</span>
+                            <span className="lib-ws__row-title">{t("lib.noIr")}</span>
                           </button>
                         </li>
                         {index.irs.map((ir) => (
@@ -718,28 +730,26 @@ export function LibraryWorkspace(props: LibraryWorkspaceProps) {
                           disabled={busy}
                           onClick={() => void saveSongFromDraft()}
                         >
-                          Guardar canción
+                          {t("lib.saveSong")}
                         </button>
                         <button
                           type="button"
                           className="lib-ws__ghost"
                           onClick={() => setSongDraft({ ...songDraft, step: 1 })}
                         >
-                          Atrás
+                          {t("common.back")}
                         </button>
                       </div>
                     </>
                   )}
                 </div>
               ) : selectedSong === null ? (
-                <p className="lib-ws__placeholder">
-                  Una canción une un tono (y opcionalmente un IR) para tu setlist.
-                </p>
+                <p className="lib-ws__placeholder">{t("lib.songExplain")}</p>
               ) : (
                 <div className="lib-ws__detail-card">
                   <h2 className="lib-ws__detail-title">{selectedSong.name}</h2>
                   <p className="lib-ws__detail-meta">
-                    Tono:{" "}
+                    {t("lib.toneLabel")}{" "}
                     {index.presets.find((p) => p.id === selectedSong.presetId)?.name ?? "—"}
                     {selectedSong.irId
                       ? ` · IR: ${index.irs.find((i) => i.id === selectedSong.irId)?.name ?? "—"}`
@@ -752,7 +762,7 @@ export function LibraryWorkspace(props: LibraryWorkspaceProps) {
                       disabled={busy}
                       onClick={() => void onApplySong(selectedSong)}
                     >
-                      Aplicar canción
+                      {t("lib.applySong")}
                     </button>
                     <button
                       type="button"
@@ -784,7 +794,7 @@ export function LibraryWorkspace(props: LibraryWorkspaceProps) {
                       disabled={busy}
                       onClick={() => void deleteSong(selectedSong.id)}
                     >
-                      Borrar
+                      {t("common.delete")}
                     </button>
                   </div>
                 </div>
@@ -810,12 +820,14 @@ export function LibraryWorkspace(props: LibraryWorkspaceProps) {
                       }}
                     >
                       <span className="lib-ws__row-title">{show.name}</span>
-                      <span className="lib-ws__row-meta">{show.songIds.length} temas</span>
+                      <span className="lib-ws__row-meta">
+                        {t("lib.trackCount", { n: show.songIds.length })}
+                      </span>
                     </button>
                   </li>
                 ))}
                 {index.shows.length === 0 ? (
-                  <li className="lib-ws__empty">Crea un show para armar el set</li>
+                  <li className="lib-ws__empty">{t("lib.createShowHint")}</li>
                 ) : null}
               </ul>
               <div className="lib-ws__list-actions">
@@ -825,21 +837,17 @@ export function LibraryWorkspace(props: LibraryWorkspaceProps) {
                   disabled={busy}
                   onClick={() => void createShow()}
                 >
-                  Nuevo show
+                  {t("lib.newShow")}
                 </button>
               </div>
             </aside>
             <main className="lib-ws__detail">
               {selectedShow === null ? (
-                <p className="lib-ws__placeholder">
-                  El show es tu cue sheet. Ordénalo, arma A/B/C y entra a escenario.
-                </p>
+                <p className="lib-ws__placeholder">{t("lib.showExplain")}</p>
               ) : armOpen ? (
                 <div className="lib-ws__detail-card">
-                  <h2 className="lib-ws__detail-title">Armar bank A · B · C</h2>
-                  <p className="lib-ws__detail-meta">
-                    Elige una canción del show para cada footswitch.
-                  </p>
+                  <h2 className="lib-ws__detail-title">{t("lib.armBank")}</h2>
+                  <p className="lib-ws__detail-meta">{t("lib.armHint")}</p>
                   <div className="lib-ws__arm">
                     {(["A", "B", "C"] as const).map((slot) => (
                       <label key={slot} className="lib-ws__arm-slot">
@@ -854,7 +862,7 @@ export function LibraryWorkspace(props: LibraryWorkspaceProps) {
                             })
                           }
                         >
-                          <option value="">— vacío —</option>
+                          <option value="">{t("common.empty")}</option>
                           {selectedShow.songIds.map((sid) => {
                             const song = index.songs.find((s) => s.id === sid);
                             return (
@@ -874,14 +882,14 @@ export function LibraryWorkspace(props: LibraryWorkspaceProps) {
                       disabled={busy}
                       onClick={() => void confirmArm()}
                     >
-                      Escribir al pedal
+                      {t("lib.writePedal")}
                     </button>
                     <button
                       type="button"
                       className="lib-ws__ghost"
                       onClick={() => setArmOpen(false)}
                     >
-                      Cancelar
+                      {t("common.cancel")}
                     </button>
                   </div>
                 </div>
@@ -893,7 +901,7 @@ export function LibraryWorkspace(props: LibraryWorkspaceProps) {
                       defaultValue={selectedShow.name}
                       key={selectedShow.id + selectedShow.updatedAt}
                       disabled={busy}
-                      aria-label="Nombre del show"
+                      aria-label={t("lib.showName")}
                       onBlur={(e) => {
                         const name = e.target.value.trim();
                         if (name && name !== selectedShow.name) {
@@ -908,7 +916,7 @@ export function LibraryWorkspace(props: LibraryWorkspaceProps) {
                         disabled={busy || selectedShow.songIds.length === 0}
                         onClick={() => onEnterStage(selectedShow.id)}
                       >
-                        Modo escenario
+                        {t("lib.stageMode")}
                       </button>
                       <button
                         type="button"
@@ -923,7 +931,7 @@ export function LibraryWorkspace(props: LibraryWorkspaceProps) {
                           setArmOpen(true);
                         }}
                       >
-                        Armar A/B/C
+                        {t("lib.armAbc")}
                       </button>
                       <button
                         type="button"
@@ -931,7 +939,7 @@ export function LibraryWorkspace(props: LibraryWorkspaceProps) {
                         disabled={busy}
                         onClick={() => void exportShow()}
                       >
-                        Exportar ZIP
+                        {t("lib.exportZip")}
                       </button>
                       <button
                         type="button"
@@ -939,7 +947,7 @@ export function LibraryWorkspace(props: LibraryWorkspaceProps) {
                         disabled={busy}
                         onClick={() => void deleteShow(selectedShow.id)}
                       >
-                        Borrar show
+                        {t("lib.deleteShow")}
                       </button>
                     </div>
                   </div>
@@ -969,15 +977,17 @@ export function LibraryWorkspace(props: LibraryWorkspaceProps) {
                               if (song) void onApplySong(song);
                             }}
                           >
-                            {song?.name ?? "Canción eliminada"}
+                            {song?.name ?? t("lib.songDeleted")}
                           </button>
-                          <span className="lib-ws__cue-handle" title="Arrastra para reordenar">
+                          <span className="lib-ws__cue-handle" title={t("lib.dragReorder")}>
                             ⋮⋮
                           </span>
                           <button
                             type="button"
                             className="lib-ws__cue-remove"
-                            aria-label={`Quitar ${song?.name ?? "canción"} del show`}
+                            aria-label={t("lib.removeFromShow", {
+                              name: song?.name ?? t("lib.songWord"),
+                            })}
                             disabled={busy}
                             onClick={() =>
                               void updateShowSongs(
@@ -986,7 +996,7 @@ export function LibraryWorkspace(props: LibraryWorkspaceProps) {
                               )
                             }
                           >
-                            Quitar
+                            {t("lib.remove")}
                           </button>
                         </li>
                       );
@@ -994,7 +1004,7 @@ export function LibraryWorkspace(props: LibraryWorkspaceProps) {
                   </ol>
 
                   <div className="lib-ws__add-song">
-                    <p className="lib-ws__detail-meta">Añadir canción al show</p>
+                    <p className="lib-ws__detail-meta">{t("lib.addSongToShow")}</p>
                     <div className="lib-ws__add-song-list">
                       {index.songs
                         .filter((s) => !selectedShow.songIds.includes(s.id))
@@ -1012,7 +1022,7 @@ export function LibraryWorkspace(props: LibraryWorkspaceProps) {
                           </button>
                         ))}
                       {index.songs.every((s) => selectedShow.songIds.includes(s.id)) ? (
-                        <span className="lib-ws__empty">Todas las canciones ya están en el show</span>
+                        <span className="lib-ws__empty">{t("lib.allSongsInShow")}</span>
                       ) : null}
                     </div>
                   </div>
@@ -1024,12 +1034,12 @@ export function LibraryWorkspace(props: LibraryWorkspaceProps) {
 
         {section === "more" ? (
           <main className="lib-ws__detail lib-ws__detail--solo">
-            <div className="lib-ws__chips" role="tablist" aria-label="Más herramientas">
+            <div className="lib-ws__chips" role="tablist" aria-label={t("lib.moreTools")}>
               {(
                 [
-                  ["irs", "IRs"],
-                  ["backups", "Backups IR"],
-                  ["export", "Packs"],
+                  ["irs", t("lib.irs")],
+                  ["backups", t("lib.backups")],
+                  ["export", t("lib.packs")],
                 ] as const
               ).map(([id, label]) => (
                 <button
@@ -1046,7 +1056,7 @@ export function LibraryWorkspace(props: LibraryWorkspaceProps) {
             </div>
             {moreTab === "irs" ? (
               <div className="lib-ws__detail-card">
-                <h2 className="lib-ws__detail-title">Impulse responses</h2>
+                <h2 className="lib-ws__detail-title">{t("device.ir.title")}</h2>
                 <MicDistanceRail
                   compact
                   value={irDistance}
@@ -1054,7 +1064,7 @@ export function LibraryWorkspace(props: LibraryWorkspaceProps) {
                   disabled={busy}
                 />
                 <label className="lib-ws__primary lib-ws__file">
-                  Importar WAV
+                  {t("lib.importWav")}
                   <input
                     type="file"
                     accept=".wav,audio/wav"
@@ -1073,7 +1083,7 @@ export function LibraryWorkspace(props: LibraryWorkspaceProps) {
                         disabled={busy}
                         onClick={() => void loadIr(ir)}
                       >
-                        → Pedal Cab {irCabinet}
+                        {t("lib.toPedalCab", { cab: irCabinet })}
                       </button>
                       <button
                         type="button"
@@ -1082,11 +1092,11 @@ export function LibraryWorkspace(props: LibraryWorkspaceProps) {
                         onClick={() =>
                           void runBusy(async () => {
                             await window.tonehubDesktop.library.deleteIr(ir.id);
-                            onStatus("IR eliminado");
+                            onStatus(t("lib.irDeleted"));
                           })
                         }
                       >
-                        Borrar
+                        {t("common.delete")}
                       </button>
                     </li>
                   ))}
@@ -1095,7 +1105,7 @@ export function LibraryWorkspace(props: LibraryWorkspaceProps) {
             ) : null}
             {moreTab === "backups" ? (
               <div className="lib-ws__detail-card">
-                <h2 className="lib-ws__detail-title">Backups ROM</h2>
+                <h2 className="lib-ws__detail-title">{t("lib.backups")}</h2>
                 <ul className="lib-ws__rows lib-ws__rows--flat">
                   {index.irBackups.map((b) => (
                     <li key={b.id} className="lib-ws__flat-row">
@@ -1110,39 +1120,37 @@ export function LibraryWorkspace(props: LibraryWorkspaceProps) {
                         onClick={() =>
                           void runBusy(async () => {
                             const ok = await confirm({
-                              title: `Restaurar Cab ${b.cabinet}`,
-                              body: "Sobrescribe el IR actual en ese cabinet del pedal.",
+                              title: t("lib.restoreCabTitle", { cab: b.cabinet }),
+                              body: t("lib.restoreCabBody"),
                               detail: b.sourceName
-                                ? `Backup · ${b.sourceName}`
+                                ? t("lib.backupMeta", { name: b.sourceName })
                                 : formatDate(b.createdAt),
                               tone: "danger",
                               requireTyped: `CAB${b.cabinet}`,
-                              confirmLabel: "Restaurar",
+                              confirmLabel: t("common.restore"),
                             });
                             if (!ok) return;
                             const result =
                               await window.tonehubDesktop.library.restoreIrBackup(b.id);
                             onCabinetApplied(result.cabinet);
-                            onStatus(`Backup restaurado · Cab ${result.cabinet}`);
+                            onStatus(t("lib.backupRestored", { cab: result.cabinet }));
                           })
                         }
                       >
-                        Restaurar
+                        {t("common.restore")}
                       </button>
                     </li>
                   ))}
                   {index.irBackups.length === 0 ? (
-                    <li className="lib-ws__empty">Aún no hay backups</li>
+                    <li className="lib-ws__empty">{t("lib.noBackups")}</li>
                   ) : null}
                 </ul>
               </div>
             ) : null}
             {moreTab === "export" ? (
               <div className="lib-ws__detail-card">
-                <h2 className="lib-ws__detail-title">Packs</h2>
-                <p className="lib-ws__detail-meta">
-                  Preferimos exportar desde un Show. Aquí puedes importar un ZIP antiguo.
-                </p>
+                <h2 className="lib-ws__detail-title">{t("lib.packs")}</h2>
+                <p className="lib-ws__detail-meta">{t("lib.packsHint")}</p>
                 <button
                   type="button"
                   className="lib-ws__primary"
@@ -1150,11 +1158,15 @@ export function LibraryWorkspace(props: LibraryWorkspaceProps) {
                   onClick={() =>
                     void runBusy(async () => {
                       const result = await window.tonehubDesktop.library.importPack();
-                      onStatus(result ? `Pack importado · ${result.pack.name}` : "Cancelado");
+                      onStatus(
+                        result
+                          ? t("lib.packImported", { name: result.pack.name })
+                          : t("common.cancelled"),
+                      );
                     })
                   }
                 >
-                  Importar pack ZIP
+                  {t("lib.importPack")}
                 </button>
                 <ul className="lib-ws__rows lib-ws__rows--flat">
                   {index.packs.map((pack) => (
@@ -1170,12 +1182,14 @@ export function LibraryWorkspace(props: LibraryWorkspaceProps) {
                               pack.id,
                             );
                             onStatus(
-                              exported ? `Exportado · ${exported.path}` : "Cancelado",
+                              exported
+                                ? t("lib.packExported", { path: exported.path })
+                                : t("common.cancelled"),
                             );
                           })
                         }
                       >
-                        Exportar
+                        {t("common.export")}
                       </button>
                     </li>
                   ))}
@@ -1187,20 +1201,25 @@ export function LibraryWorkspace(props: LibraryWorkspaceProps) {
       </div>
 
       {saveSheet !== null ? (
-        <div className="lib-ws__sheet" role="dialog" aria-modal="true" aria-label="Guardar tono">
+        <div
+          className="lib-ws__sheet"
+          role="dialog"
+          aria-modal="true"
+          aria-label={t("lib.saveToneDialog")}
+        >
           <div className="lib-ws__sheet-card">
             <h2 className="lib-ws__detail-title">
-              {saveSheet.mode === "update" ? "Actualizar tono" : "Guardar tono live"}
+              {saveSheet.mode === "update" ? t("lib.updateTone") : t("lib.saveToneLive")}
             </h2>
             <label className="lib-ws__field">
-              Nombre
+              {t("common.name")}
               <input
                 value={saveSheet.name}
                 onChange={(e) => setSaveSheet({ ...saveSheet, name: e.target.value })}
               />
             </label>
             <label className="lib-ws__field">
-              Perfil
+              {t("lib.profile")}
               <select
                 value={saveSheet.profile}
                 onChange={(e) =>
@@ -1212,22 +1231,22 @@ export function LibraryWorkspace(props: LibraryWorkspaceProps) {
               >
                 {PROFILES.map((p) => (
                   <option key={p} value={p}>
-                    {p}
+                    {profileLabel(p)}
                   </option>
                 ))}
               </select>
             </label>
             <details className="lib-ws__more-details">
-              <summary>Más detalles</summary>
+              <summary>{t("lib.moreDetails")}</summary>
               <label className="lib-ws__field">
-                Notas
+                {t("common.notes")}
                 <input
                   value={saveSheet.notes}
                   onChange={(e) => setSaveSheet({ ...saveSheet, notes: e.target.value })}
                 />
               </label>
               <label className="lib-ws__field">
-                Tags (coma)
+                {t("lib.tags")}
                 <input
                   value={saveSheet.tags}
                   onChange={(e) => setSaveSheet({ ...saveSheet, tags: e.target.value })}
@@ -1241,14 +1260,14 @@ export function LibraryWorkspace(props: LibraryWorkspaceProps) {
                 disabled={busy}
                 onClick={() => void persistPreset(saveSheet)}
               >
-                {saveSheet.mode === "update" ? "Actualizar" : "Guardar"}
+                {saveSheet.mode === "update" ? t("common.update") : t("common.save")}
               </button>
               <button
                 type="button"
                 className="lib-ws__ghost"
                 onClick={() => setSaveSheet(null)}
               >
-                Cancelar
+                {t("common.cancel")}
               </button>
             </div>
           </div>

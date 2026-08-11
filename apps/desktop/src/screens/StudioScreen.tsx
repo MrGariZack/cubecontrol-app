@@ -11,6 +11,7 @@ import { TunerPanel } from "../components/TunerPanel";
 import { midiLog, midiWarn } from "../debug/midiLog";
 import { useConfirmDialog } from "../hooks/useConfirmDialog";
 import { useDebouncedLiveWrite } from "../hooks/useDebouncedLiveWrite";
+import { useI18n } from "../i18n";
 import type { BankSnapshot, DesktopConnectionInfo, LiveParamsSnapshot } from "../types/device";
 import type { MatchVolumesSource } from "../../electron/deviceBridge";
 import type { ShowLibraryItem, SlotDiffRow, SongLibraryItem } from "../../electron/library/types";
@@ -40,6 +41,7 @@ function slotParams(bank: BankSnapshot, slot: PresetSlotId): LiveParamsSnapshot 
 }
 
 export function StudioScreen({ connection, onDisconnect }: StudioScreenProps) {
+  const { t } = useI18n();
   const [activeSlot, setActiveSlot] = useState<PresetSlotId>(connection.activeSlot);
   const [params, setParams] = useState<LiveParamsSnapshot>(connection.liveParams);
   const [bank, setBank] = useState<BankSnapshot>(connection.bank);
@@ -207,13 +209,13 @@ export function StudioScreen({ connection, onDisconnect }: StudioScreenProps) {
 
     midiLog("ui-slot-select", { from: activeSlot, to: slot, gen });
     await cancelPending();
-    await pushCheckpoint(`antes de slot ${slot}`);
+    await pushCheckpoint(t("studio.checkpoint.slot", { slot }));
     setParams(nextParams);
     setActiveSlot(slot);
     setLiveDirty(false);
     setLoadingSlot(null);
     checkpointArmed.current = true;
-    setStatus(`Slot ${slot} · aplicando…`);
+    setStatus(t("studio.slotApplying", { slot }));
 
     void window.tonehubDesktop
       .applySlotToLive(slot)
@@ -222,7 +224,7 @@ export function StudioScreen({ connection, onDisconnect }: StudioScreenProps) {
           midiLog("ui-slot-apply-stale", { slot, gen, current: slotApplyGen.current });
           return;
         }
-        setStatus(`Slot ${slot}`);
+        setStatus(t("studio.slotDone", { slot }));
         midiLog("ui-slot-apply-ok", { slot, gen });
       })
       .catch((err: unknown) => {
@@ -237,15 +239,15 @@ export function StudioScreen({ connection, onDisconnect }: StudioScreenProps) {
   async function onSave() {
     if (busy) return;
     const ok = await confirm({
-      title: `Guardar slot ${activeSlot}`,
-      body: "Se reescribe el preset de ese footswitch en el bank del pedal.",
+      title: t("studio.saveTitle", { slot: activeSlot }),
+      body: t("studio.saveBody"),
       tone: "warn",
-      confirmLabel: `Guardar ${activeSlot}`,
+      confirmLabel: t("toolbar.saveSlot", { slot: activeSlot }),
     });
     if (!ok) return;
     setActionBusy(true);
     setError(null);
-    setStatus(`Guardando slot ${activeSlot}…`);
+    setStatus(t("studio.saving", { slot: activeSlot }));
     try {
       await flush();
       const result = await window.tonehubDesktop.saveSlot(activeSlot, params);
@@ -253,8 +255,8 @@ export function StudioScreen({ connection, onDisconnect }: StudioScreenProps) {
       setLiveDirty(false);
       setStatus(
         result.verified
-          ? `Slot ${activeSlot} guardado y verificado`
-          : `Slot ${activeSlot} escrito (verify falló — revisa el pedal)`,
+          ? t("studio.savedOk", { slot: activeSlot })
+          : t("studio.savedVerifyFail", { slot: activeSlot }),
       );
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
@@ -268,7 +270,7 @@ export function StudioScreen({ connection, onDisconnect }: StudioScreenProps) {
     if (busy) return;
     setActionBusy(true);
     setError(null);
-    setStatus("Exportando bank A+B+C…");
+    setStatus(t("studio.exporting"));
     try {
       await flush();
       const result = await window.tonehubDesktop.exportBank();
@@ -276,7 +278,7 @@ export function StudioScreen({ connection, onDisconnect }: StudioScreenProps) {
         setStatus(null);
         return;
       }
-      setStatus(`Bank exportado · ${result.path}`);
+      setStatus(t("studio.exported", { path: result.path }));
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
       setStatus(null);
@@ -288,19 +290,19 @@ export function StudioScreen({ connection, onDisconnect }: StudioScreenProps) {
   async function onImportBank() {
     if (busy) return;
     const ok = await confirm({
-      title: "Importar bank",
-      body: `Se sobrescriben A+B+C y se carga el slot ${activeSlot} a live.`,
-      detail: "Elige un JSON exportado antes. Esto escribe el bank en el pedal.",
+      title: t("studio.importTitle"),
+      body: t("studio.importBody", { slot: activeSlot }),
+      detail: t("studio.importDetail"),
       tone: "warn",
-      confirmLabel: "Elegir archivo…",
+      confirmLabel: t("studio.chooseFile"),
     });
     if (!ok) return;
     setActionBusy(true);
     setError(null);
-    setStatus("Importando bank…");
+    setStatus(t("studio.importing"));
     try {
       await flush();
-      await pushCheckpoint("antes de import bank");
+      await pushCheckpoint(t("studio.checkpoint.importBank"));
       const result = await window.tonehubDesktop.importBank(activeSlot);
       if (result === null) {
         setStatus(null);
@@ -312,8 +314,8 @@ export function StudioScreen({ connection, onDisconnect }: StudioScreenProps) {
       checkpointArmed.current = true;
       setStatus(
         result.verified
-          ? `Bank restaurado · live ${result.activeSlot} · ${result.path}`
-          : `Bank escrito (verify falló) · ${result.path}`,
+          ? t("studio.restoredOk", { slot: result.activeSlot, path: result.path })
+          : t("studio.restoredVerifyFail", { path: result.path }),
       );
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
@@ -336,7 +338,7 @@ export function StudioScreen({ connection, onDisconnect }: StudioScreenProps) {
   function onLoadIrClick() {
     if (busy) return;
     if (irCabinet < 1 || irCabinet > 8) {
-      setError("Elige Cabinet IR 1..8");
+      setError(t("studio.pickCab"));
       return;
     }
     // Must open the file picker synchronously from the click gesture.
@@ -350,27 +352,27 @@ export function StudioScreen({ connection, onDisconnect }: StudioScreenProps) {
 
     if (irCabinet !== 8) {
       const ok = await confirm({
-        title: `Sobreescribir Cab ${irCabinet}`,
-        body: "Puede pisar un IR de fábrica. Cab 8 es el slot de upload seguro.",
-        detail: `Archivo: ${file.name}\nROM slot ${irCabinet - 1}. Backup local no garantiza recuperación.`,
+        title: t("studio.overwriteCabTitle", { cab: irCabinet }),
+        body: t("studio.overwriteCabBody"),
+        detail: t("studio.overwriteCabDetail", { file: file.name, rom: irCabinet - 1 }),
         tone: "danger",
-        confirmLabel: "Seguir",
+        confirmLabel: t("common.follow"),
       });
       if (!ok) {
         if (fileRef.current) fileRef.current.value = "";
-        setStatus("Carga IR cancelada");
+        setStatus(t("studio.irCancelled"));
         return;
       }
       const ok2 = await confirm({
-        title: "Última confirmación",
-        body: `Se escribirá flash ROM del Cabinet ${irCabinet}.`,
+        title: t("studio.irLastTitle"),
+        body: t("studio.irLastBody", { cab: irCabinet }),
         tone: "danger",
         requireTyped: `CAB${irCabinet}`,
-        confirmLabel: "Escribir IR",
+        confirmLabel: t("studio.irWrite"),
       });
       if (!ok2) {
         if (fileRef.current) fileRef.current.value = "";
-        setStatus("Carga IR cancelada — segunda confirmación");
+        setStatus(t("studio.irCancelled2"));
         return;
       }
     }
@@ -379,7 +381,11 @@ export function StudioScreen({ connection, onDisconnect }: StudioScreenProps) {
     setActionBusy(true);
     setError(null);
     setStatus(
-      `Cargando IR «${file.name}» → Cab ${irCabinet} · dist ${Math.round(irDistance * 100)}% + backup…`,
+      t("studio.irLoading", {
+        file: file.name,
+        cab: irCabinet,
+        pct: Math.round(irDistance * 100),
+      }),
     );
     midiLog("ir-load-start", {
       file: file.name,
@@ -389,7 +395,7 @@ export function StudioScreen({ connection, onDisconnect }: StudioScreenProps) {
     });
     try {
       await flush();
-      await pushCheckpoint("antes de cargar IR");
+      await pushCheckpoint(t("studio.checkpoint.ir"));
       const buffer = new Uint8Array(await file.arrayBuffer());
       const result = await window.tonehubDesktop.loadIrFromWav(buffer, irCabinet, {
         confirmFactoryIrOverwrite: irCabinet !== 8,
@@ -407,8 +413,12 @@ export function StudioScreen({ connection, onDisconnect }: StudioScreenProps) {
       });
       setStatus(
         result.persistVerified
-          ? `IR listo · Cab ${result.cabinet} · dist ${Math.round(irDistance * 100)}% · match ${result.liveMatch}`
-          : `IR escrito pero verify falló · Cab ${result.cabinet} · match ${result.liveMatch}`,
+          ? t("studio.irReady", {
+              cab: result.cabinet,
+              pct: Math.round(irDistance * 100),
+              match: result.liveMatch,
+            })
+          : t("studio.irVerifyFail", { cab: result.cabinet, match: result.liveMatch }),
       );
     } catch (err) {
       midiWarn("ir-load-fail", {
@@ -432,7 +442,7 @@ export function StudioScreen({ connection, onDisconnect }: StudioScreenProps) {
       const result = await window.tonehubDesktop.library.undo({
         params: { ...params },
         activeSlot,
-        label: "antes de undo",
+        label: t("studio.checkpoint.undo"),
       });
       setUndoCount(result.undoCount);
       setRedoCount(result.redoCount);
@@ -440,7 +450,7 @@ export function StudioScreen({ connection, onDisconnect }: StudioScreenProps) {
       setParams(result.snapshot.params);
       setActiveSlot(result.snapshot.activeSlot);
       checkpointArmed.current = true;
-      setStatus(`Undo · ${result.snapshot.label}`);
+      setStatus(t("studio.undo", { label: result.snapshot.label }));
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     } finally {
@@ -457,7 +467,7 @@ export function StudioScreen({ connection, onDisconnect }: StudioScreenProps) {
       const result = await window.tonehubDesktop.library.redo({
         params: { ...params },
         activeSlot,
-        label: "antes de redo",
+        label: t("studio.checkpoint.redo"),
       });
       setUndoCount(result.undoCount);
       setRedoCount(result.redoCount);
@@ -465,7 +475,7 @@ export function StudioScreen({ connection, onDisconnect }: StudioScreenProps) {
       setParams(result.snapshot.params);
       setActiveSlot(result.snapshot.activeSlot);
       checkpointArmed.current = true;
-      setStatus(`Redo · ${result.snapshot.label}`);
+      setStatus(t("studio.redo", { label: result.snapshot.label }));
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     } finally {
@@ -509,12 +519,10 @@ export function StudioScreen({ connection, onDisconnect }: StudioScreenProps) {
       setCompareOpen(true);
       const volume = rows.find((row) => row.param === "volume");
       if (dirty) {
-        setStatus(
-          `Compare = bank guardado · Live ${activeSlot} tiene cambios sin Guardar`,
-        );
+        setStatus(t("studio.compareDirty", { slot: activeSlot }));
       } else if (volume?.differs) {
         setStatus(
-          `Volúmenes distintos · A ${volume.a} · B ${volume.b} · C ${volume.c}`,
+          t("studio.volDiff", { a: volume.a, b: volume.b, c: volume.c }),
         );
       }
     } catch (err) {
@@ -528,21 +536,21 @@ export function StudioScreen({ connection, onDisconnect }: StudioScreenProps) {
     if (busy) return;
     const label =
       source === "live"
-        ? `volumen live (${params.volume}) en A+B+C`
-        : `volumen del slot ${source} en A+B+C`;
+        ? t("studio.matchLiveLabel", { v: params.volume })
+        : t("studio.matchSlotLabel", { slot: source });
     const ok = await confirm({
-      title: "Igualar volúmenes A/B/C",
-      body: `Se escribe ${label} en el bank del pedal.`,
+      title: t("studio.matchTitle"),
+      body: t("studio.matchBody", { label }),
       tone: "warn",
-      confirmLabel: "Igualar",
+      confirmLabel: t("studio.matchCta"),
     });
     if (!ok) return;
     setActionBusy(true);
     setError(null);
-    setStatus("Igualando volúmenes A/B/C…");
+    setStatus(t("studio.matching"));
     try {
       await flush();
-      await pushCheckpoint("antes de igualar volúmenes");
+      await pushCheckpoint(t("studio.checkpoint.matchVol"));
       const result = await window.tonehubDesktop.matchVolumes(
         source,
         activeSlot,
@@ -556,8 +564,13 @@ export function StudioScreen({ connection, onDisconnect }: StudioScreenProps) {
       setCompareRows(rows);
       setStatus(
         result.verified
-          ? `Volúmenes igualados a ${result.volume} · A/B/C = ${result.volumes.a}/${result.volumes.b}/${result.volumes.c}`
-          : `Volúmenes escritos a ${result.volume} (verify falló)`,
+          ? t("studio.matchedOk", {
+              v: result.volume,
+              a: result.volumes.a,
+              b: result.volumes.b,
+              c: result.volumes.c,
+            })
+          : t("studio.matchedFail", { v: result.volume }),
       );
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
@@ -572,21 +585,21 @@ export function StudioScreen({ connection, onDisconnect }: StudioScreenProps) {
     const fromSlot = activeSlot;
     const dirty = await refreshLiveDirty(params, fromSlot).catch(() => liveDirty);
     const ok = await confirm({
-      title: `Live ${fromSlot} → foot ${to}`,
-      body: `Escribe el slot ${to} en el bank (sin Guardar) y lo carga a live.`,
-      detail:
-        `El bank de ${fromSlot} no se actualiza` +
-        (dirty ? " — sigues con cambios sin Guardar ahí." : "."),
+      title: t("studio.copyLiveTitle", { from: fromSlot, to }),
+      body: t("studio.copyLiveBody", { to }),
+      detail: dirty
+        ? t("studio.copyLiveDetailDirty", { from: fromSlot })
+        : t("studio.copyLiveDetailClean", { from: fromSlot }),
       tone: "warn",
-      confirmLabel: `Copiar → ${to}`,
+      confirmLabel: t("studio.copyTo", { to }),
     });
     if (!ok) return;
     setActionBusy(true);
     setError(null);
-    setStatus(`Copiando live → ${to}…`);
+    setStatus(t("studio.copyingLive", { to }));
     try {
       await flush();
-      await pushCheckpoint(`antes de copiar live → ${to}`);
+      await pushCheckpoint(t("studio.checkpoint.copyLive", { to }));
       const result = await window.tonehubDesktop.copySlot("live", to, {
         live: params,
         liveSlot: fromSlot,
@@ -602,8 +615,8 @@ export function StudioScreen({ connection, onDisconnect }: StudioScreenProps) {
       }
       setStatus(
         result.verified
-          ? `Live → ${to} (verificado) · bank ${fromSlot} no tocado`
-          : `Preset escrito en ${to} (verify falló — revisa el pedal)`,
+          ? t("studio.copyLiveOk", { to, from: fromSlot })
+          : t("studio.copyLiveFail", { to }),
       );
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
@@ -622,29 +635,31 @@ export function StudioScreen({ connection, onDisconnect }: StudioScreenProps) {
     let source: "live" | PresetSlotId = from;
     if (dirty) {
       const useLive = await confirm({
-        title: `Live ${from} sin Guardar`,
-        body: `Compare muestra el bank, no lo que oyes. ¿Copiar el live a ${to}?`,
-        detail: `Si quieres el bank viejo de ${from}, guárdalo antes y vuelve a Compare.`,
+        title: t("studio.copyDirtyTitle", { from }),
+        body: t("studio.copyDirtyBody", { to }),
+        detail: t("studio.copyDirtyDetail", { from }),
         tone: "warn",
-        confirmLabel: `Copiar live → ${to}`,
+        confirmLabel: t("studio.copyLiveCta", { to }),
       });
       if (!useLive) return;
       source = "live";
     } else {
       const ok = await confirm({
-        title: `Bank ${from} → ${to}`,
-        body: `Se sobrescribe ${to} y se carga ${to} a live.`,
+        title: t("studio.copyBankTitle", { from, to }),
+        body: t("studio.copyBankBody", { to }),
         tone: "warn",
-        confirmLabel: "Copiar",
+        confirmLabel: t("common.copy"),
       });
       if (!ok) return;
     }
 
     setActionBusy(true);
     setError(null);
-    setStatus(`Copiando ${source === "live" ? "live" : from} → ${to}…`);
+    setStatus(t("studio.copying", { from: source === "live" ? "live" : from, to }));
     try {
-      await pushCheckpoint(`antes de copiar ${source === "live" ? "live" : from} → ${to}`);
+      await pushCheckpoint(
+        t("studio.checkpoint.copy", { from: source === "live" ? "live" : from, to }),
+      );
       const result =
         source === "live"
           ? await window.tonehubDesktop.copySlot("live", to, {
@@ -661,8 +676,10 @@ export function StudioScreen({ connection, onDisconnect }: StudioScreenProps) {
       setCompareRows(rows);
       setStatus(
         result.verified
-          ? `${source === "live" ? "Live" : `Bank ${from}`} → ${to} (verificado)`
-          : `Slot ${to} escrito (verify falló — revisa el pedal)`,
+          ? source === "live"
+            ? t("studio.copyOkLive", { to })
+            : t("studio.copyOkBank", { from, to })
+          : t("studio.copyFail", { to }),
       );
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
@@ -682,7 +699,7 @@ export function StudioScreen({ connection, onDisconnect }: StudioScreenProps) {
       setParams(next);
       checkpointArmed.current = true;
       setNav("editor");
-      setStatus("Tono aplicado a live");
+      setStatus(t("studio.toneApplied"));
     } finally {
       setActionBusy(false);
     }
@@ -691,7 +708,7 @@ export function StudioScreen({ connection, onDisconnect }: StudioScreenProps) {
   async function resolveSongPreset(song: SongLibraryItem): Promise<LiveParamsSnapshot> {
     const index = await window.tonehubDesktop.library.list();
     const preset = index.presets.find((p) => p.id === song.presetId);
-    if (preset === undefined) throw new Error(`Tono de «${song.name}» no encontrado`);
+    if (preset === undefined) throw new Error(t("studio.toneMissing", { name: song.name }));
     return preset.params;
   }
 
@@ -700,7 +717,7 @@ export function StudioScreen({ connection, onDisconnect }: StudioScreenProps) {
     setError(null);
     try {
       await flush();
-      await pushCheckpoint(`canción · ${song.name}`);
+      await pushCheckpoint(t("studio.checkpoint.song", { name: song.name }));
       const next = await resolveSongPreset(song);
       await window.tonehubDesktop.applyLiveParams(next);
       setParams(next);
@@ -708,25 +725,25 @@ export function StudioScreen({ connection, onDisconnect }: StudioScreenProps) {
         const cabinet = song.irCabinet ?? irCabinet;
         if (cabinet !== 8) {
           const ok = await confirm({
-            title: `IR de la canción → Cab ${cabinet}`,
-            body: "Puede pisar factory. Prefiere Cab 8 cuando puedas.",
+            title: t("studio.songIrTitle", { cab: cabinet }),
+            body: t("studio.songIrBody"),
             tone: "danger",
-            confirmLabel: "Seguir",
+            confirmLabel: t("common.follow"),
           });
           if (!ok) {
-            setStatus(`Canción «${song.name}» en live (IR omitido)`);
+            setStatus(t("studio.songIrSkipped", { name: song.name }));
             checkpointArmed.current = true;
             return;
           }
           const ok2 = await confirm({
-            title: "Última confirmación",
-            body: `¿Escribir IR en Cab ${cabinet}?`,
+            title: t("studio.irLastTitle"),
+            body: t("studio.songIrLastBody", { cab: cabinet }),
             tone: "danger",
             requireTyped: `CAB${cabinet}`,
-            confirmLabel: "Escribir IR",
+            confirmLabel: t("studio.irWrite"),
           });
           if (!ok2) {
-            setStatus(`Canción «${song.name}» en live (IR omitido)`);
+            setStatus(t("studio.songIrSkipped", { name: song.name }));
             checkpointArmed.current = true;
             return;
           }
@@ -738,7 +755,7 @@ export function StudioScreen({ connection, onDisconnect }: StudioScreenProps) {
         setParams((prev) => ({ ...prev, cabinet }));
       }
       checkpointArmed.current = true;
-      setStatus(`Canción «${song.name}» aplicada`);
+      setStatus(t("studio.songApplied", { name: song.name }));
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
       setStatus(null);
@@ -752,7 +769,7 @@ export function StudioScreen({ connection, onDisconnect }: StudioScreenProps) {
     setError(null);
     try {
       await flush();
-      await pushCheckpoint(`${song.name} → ${slot}`);
+      await pushCheckpoint(t("studio.checkpoint.songFoot", { name: song.name, slot }));
       const next = await resolveSongPreset(song);
       const result = await window.tonehubDesktop.copySlot("live", slot, {
         live: next,
@@ -762,7 +779,7 @@ export function StudioScreen({ connection, onDisconnect }: StudioScreenProps) {
       setActiveSlot(slot);
       setParams(next);
       checkpointArmed.current = true;
-      setStatus(`«${song.name}» → foot ${slot}`);
+      setStatus(t("studio.songToFoot", { name: song.name, slot }));
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
       setStatus(null);
@@ -780,7 +797,7 @@ export function StudioScreen({ connection, onDisconnect }: StudioScreenProps) {
     setError(null);
     try {
       await flush();
-      await pushCheckpoint("armar bank desde show");
+      await pushCheckpoint(t("studio.checkpoint.arm"));
       for (const slot of ["A", "B", "C"] as const) {
         const song = slots[slot];
         if (song === null) continue;
@@ -796,7 +813,7 @@ export function StudioScreen({ connection, onDisconnect }: StudioScreenProps) {
         setParams(next);
       }
       checkpointArmed.current = true;
-      setStatus("Bank A/B/C armado desde el show");
+      setStatus(t("studio.bankArmed"));
       setNav("editor");
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
@@ -819,13 +836,17 @@ export function StudioScreen({ connection, onDisconnect }: StudioScreenProps) {
 
   const toolbarStatus =
     error ??
-    (loadingSlot ? `Cargando slot ${loadingSlot}…` : null) ??
+    (loadingSlot ? t("studio.slotLoading", { slot: loadingSlot }) : null) ??
     status;
 
   const showChip =
     activeShow === null
       ? null
-      : `Show · ${activeShow.name} · ${Math.min(activeSongIndex + 1, Math.max(activeShow.songIds.length, 1))}/${activeShow.songIds.length || 0}`;
+      : t("studio.showChip", {
+          name: activeShow.name,
+          current: Math.min(activeSongIndex + 1, Math.max(activeShow.songIds.length, 1)),
+          total: activeShow.songIds.length || 0,
+        });
 
   return (
     <div className={`studio${nav === "stage" ? " studio--stage" : ""}`}>

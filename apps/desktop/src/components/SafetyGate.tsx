@@ -1,16 +1,17 @@
 import { useState } from "react";
-import {
-  SAFETY_BULLETS,
-  SAFETY_RISK_TIERS,
-  writeSafetyAcceptance,
-} from "../safety/disclaimer";
+import { useI18n } from "../i18n";
+import { writeSafetyAcceptance } from "../safety/disclaimer";
+import { LanguageSwitcher } from "./LanguageSwitcher";
 import "./safety-gate.css";
 
 type SafetyGateProps = {
   readonly onAccepted: () => void;
 };
 
+const TIER_IDS = ["live", "bank", "ir"] as const;
+
 export function SafetyGate({ onAccepted }: SafetyGateProps) {
+  const { t } = useI18n();
   const [readRisks, setReadRisks] = useState(false);
   const [ownRisk, setOwnRisk] = useState(false);
   const [noOfficial, setNoOfficial] = useState(false);
@@ -26,26 +27,26 @@ export function SafetyGate({ onAccepted }: SafetyGateProps) {
   return (
     <main className="safety-gate">
       <div className="safety-gate__card">
-        <p className="safety-gate__eyebrow">Antes de conectar el pedal</p>
-        <h1 className="safety-gate__title">Uso bajo tu responsabilidad</h1>
-        <p className="safety-gate__lead">
-          CubeControl puede leer y escribir el CUBE Baby por USB-MIDI. La mayoría de ediciones
-          live son seguras; las escrituras a bank e IR ROM pueden borrar datos del pedal.
-        </p>
+        <div className="safety-gate__lang">
+          <LanguageSwitcher />
+        </div>
+        <p className="safety-gate__eyebrow">{t("safety.eyebrow")}</p>
+        <h1 className="safety-gate__title">{t("safety.title")}</h1>
+        <p className="safety-gate__lead">{t("safety.lead")}</p>
 
         <ul className="safety-gate__tiers">
-          {SAFETY_RISK_TIERS.map((tier) => (
-            <li key={tier.id} className={`safety-gate__tier safety-gate__tier--${tier.id}`}>
-              <span className="safety-gate__tier-level">{tier.level}</span>
-              <strong>{tier.title}</strong>
-              <p>{tier.body}</p>
+          {TIER_IDS.map((id) => (
+            <li key={id} className={`safety-gate__tier safety-gate__tier--${id}`}>
+              <span className="safety-gate__tier-level">{t(`safety.tier.${id}.level`)}</span>
+              <strong>{t(`safety.tier.${id}.title`)}</strong>
+              <p>{t(`safety.tier.${id}.body`)}</p>
             </li>
           ))}
         </ul>
 
         <ul className="safety-gate__bullets">
-          {SAFETY_BULLETS.map((line) => (
-            <li key={line}>{line}</li>
+          {[1, 2, 3, 4, 5, 6].map((n) => (
+            <li key={n}>{t(`safety.bullet.${n}`)}</li>
           ))}
         </ul>
 
@@ -56,7 +57,7 @@ export function SafetyGate({ onAccepted }: SafetyGateProps) {
               checked={readRisks}
               onChange={(e) => setReadRisks(e.target.checked)}
             />
-            He leído los niveles de riesgo (live / bank / IR ROM).
+            {t("safety.check.risks")}
           </label>
           <label>
             <input
@@ -64,8 +65,7 @@ export function SafetyGate({ onAccepted }: SafetyGateProps) {
               checked={ownRisk}
               onChange={(e) => setOwnRisk(e.target.checked)}
             />
-            Acepto usar CubeControl bajo mi propia responsabilidad; no hay garantía ni soporte
-            oficial del fabricante.
+            {t("safety.check.own")}
           </label>
           <label>
             <input
@@ -73,8 +73,7 @@ export function SafetyGate({ onAccepted }: SafetyGateProps) {
               checked={noOfficial}
               onChange={(e) => setNoOfficial(e.target.checked)}
             />
-            Entiendo que preferiré Cab 8 para IRs nuevos y haré backup de bank antes de
-            experimentos arriesgados.
+            {t("safety.check.cab8")}
           </label>
         </div>
 
@@ -84,12 +83,9 @@ export function SafetyGate({ onAccepted }: SafetyGateProps) {
           disabled={!canContinue}
           onClick={accept}
         >
-          Entiendo los riesgos — continuar
+          {t("safety.cta")}
         </button>
-        <p className="safety-gate__foot">
-          Este aviso se guarda en este equipo. Si actualizamos el texto de seguridad, volverá a
-          pedirse aceptación.
-        </p>
+        <p className="safety-gate__foot">{t("safety.foot")}</p>
       </div>
     </main>
   );

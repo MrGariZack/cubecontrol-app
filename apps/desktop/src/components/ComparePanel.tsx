@@ -1,6 +1,7 @@
 import type { PresetSlotId } from "@tonehub/cube-baby-protocol";
 import type { MatchVolumesSource } from "../../electron/deviceBridge";
 import type { SlotDiffRow } from "../../electron/library/types";
+import { useI18n } from "../i18n";
 import type { LiveParamsSnapshot } from "../types/device";
 
 const SLOT_PAIRS: readonly { from: PresetSlotId; to: PresetSlotId }[] = [
@@ -35,6 +36,7 @@ export function ComparePanel({
   onMatchVolumes,
   onCopySlot,
 }: ComparePanelProps) {
+  const { t } = useI18n();
   if (!open) return null;
 
   const volumeRow = rows.find((row) => row.param === "volume");
@@ -45,24 +47,19 @@ export function ComparePanel({
   const liveVolume = liveParams.volume;
 
   return (
-    <div className="compare-panel" role="dialog" aria-label="Comparar slots A B C">
+    <div className="compare-panel" role="dialog" aria-label={t("compare.aria")}>
       <div className="compare-panel__head">
         <h2 className="compare-panel__title">Compare A / B / C</h2>
         <button type="button" className="compare-panel__close" onClick={onClose} disabled={busy}>
-          Cerrar
+          {t("compare.close")}
         </button>
       </div>
 
-      <p className="compare-panel__hint">
-        La tabla es el <strong>bank guardado</strong> del pedal (lo que queda tras Guardar). Mover
-        knobs solo cambia el live hasta que guardas o copias.
-      </p>
+      <p className="compare-panel__hint">{t("compare.explain")}</p>
 
       {liveDirty ? (
         <p className="compare-panel__dirty" role="status">
-          Live {activeSlot} tiene cambios sin Guardar — lo que oyes puede no coincidir con la
-          columna {activeSlot}. Al copiar desde {activeSlot} te pediremos si quieres el live o
-          cancelar.
+          {t("compare.dirty", { slot: activeSlot })}
         </p>
       ) : null}
 
@@ -74,13 +71,9 @@ export function ComparePanel({
         >
           <div className="compare-panel__volume-head">
             <strong>Volumen</strong>
-            <span>
-              {volumeDiffers
-                ? "Los 3 slots no están al mismo nivel — al cambiar A/B/C se nota el salto."
-                : "A, B y C tienen el mismo volumen en el bank."}
-            </span>
+            <span>{volumeDiffers ? t("compare.volDiff") : t("compare.volSame")}</span>
           </div>
-          <div className="compare-panel__volume-meters" aria-label="Volúmenes A B C">
+          <div className="compare-panel__volume-meters" aria-label={t("compare.volumes")}>
             {(
               [
                 ["A", volumeRow.a],
@@ -118,33 +111,33 @@ export function ComparePanel({
               type="button"
               disabled={busy}
               onClick={() => onMatchVolumes("A")}
-              title="Copia el volumen del slot A a B y C"
+              title={t("compare.matchA")}
             >
-              Igualar a A ({volumeRow.a})
+              {t("compare.equalA", { v: volumeRow.a })}
             </button>
             <button
               type="button"
               disabled={busy}
               onClick={() => onMatchVolumes("B")}
-              title="Copia el volumen del slot B a A y C"
+              title={t("compare.matchB")}
             >
-              Igualar a B ({volumeRow.b})
+              {t("compare.equalB", { v: volumeRow.b })}
             </button>
             <button
               type="button"
               disabled={busy}
               onClick={() => onMatchVolumes("C")}
-              title="Copia el volumen del slot C a A y B"
+              title={t("compare.matchC")}
             >
-              Igualar a C ({volumeRow.c})
+              {t("compare.equalC", { v: volumeRow.c })}
             </button>
             <button
               type="button"
               disabled={busy}
               onClick={() => onMatchVolumes("live")}
-              title="Escribe el volumen live actual en A, B y C"
+              title={t("compare.matchLive")}
             >
-              Igualar a live ({liveVolume})
+              {t("compare.equalLive", { v: liveVolume })}
             </button>
           </div>
         </section>
@@ -152,11 +145,8 @@ export function ComparePanel({
 
       <section className="compare-panel__copy">
         <div className="compare-panel__copy-head">
-          <strong>Copiar preset</strong>
-          <span>
-            Por defecto clona el BANK (guardado). Si el origen es el slot live con cambios sin
-            Guardar, te pedirá confirmar copiar lo que oyes.
-          </span>
+          <strong>{t("compare.copyPreset")}</strong>
+          <span>{t("compare.copyHint")}</span>
         </div>
         <div className="compare-panel__copy-actions">
           {SLOT_PAIRS.map(({ from, to }) => (
@@ -167,8 +157,8 @@ export function ComparePanel({
               onClick={() => onCopySlot(from, to)}
               title={
                 liveDirty && from === activeSlot
-                  ? `Live ${from} sucio — confirmará copiar live → ${to}`
-                  : `Copia el bank slot ${from} sobre ${to}`
+                  ? t("compare.copyDirtyTitle", { from, to })
+                  : t("compare.copyBankTitle", { from, to })
               }
             >
               {from}→{to}
@@ -180,8 +170,8 @@ export function ComparePanel({
 
       <p className="compare-panel__sub">
         {diffs.length === 0
-          ? "Los tres slots del bank son idénticos."
-          : `${diffs.length} parámetros difieren entre slots del bank.`}
+          ? t("compare.identical")
+          : t("compare.diffCount", { n: diffs.length })}
       </p>
       <table className="compare-panel__table">
         <thead>
