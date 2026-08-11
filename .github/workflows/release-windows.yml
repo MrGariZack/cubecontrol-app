@@ -23,6 +23,9 @@ jobs:
         with:
           repository: MrGariZack/cubecontrol
           path: Tonehub
+          # Default GITHUB_TOKEN works when cubecontrol is public.
+          # If core is private, set repo secret CORE_CHECKOUT_TOKEN (PAT) and uncomment:
+          # token: ${{ secrets.CORE_CHECKOUT_TOKEN }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v4

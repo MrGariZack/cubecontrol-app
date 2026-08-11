@@ -59,7 +59,9 @@ git push origin v0.1.0
 
 4. Workflow [`.github/workflows/release-windows.yml`](.github/workflows/release-windows.yml) builds Windows artifacts and attaches them to the GitHub Release for that tag.
 
-Requires: repos **public** (or Actions enabled) and permission for `contents: write` on the app repo. The workflow checks out **both** `cubecontrol` and `cubecontrol-app` as siblings.
+Requires: both repos **public** (recommended), Actions enabled, and `contents: write` on the app repo.
+The workflow checks out **both** `cubecontrol` and `cubecontrol-app` as siblings.
+If the core stays private, add a repo secret `CORE_CHECKOUT_TOKEN` (PAT with read access to `cubecontrol`).
 
 ### First-time GitHub CLI (optional)
 
