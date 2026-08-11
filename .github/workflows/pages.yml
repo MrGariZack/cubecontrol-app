@@ -29,6 +29,9 @@ jobs:
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
+        with:
+          # Creates/enables the Pages site if Settings → Pages was just flipped on.
+          enablement: true
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
