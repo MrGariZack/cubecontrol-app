@@ -47,9 +47,9 @@ jobs:
         working-directory: tonehub-app
         run: pnpm install --frozen-lockfile
 
-      - name: Typecheck app
+      - name: Typecheck desktop
         working-directory: tonehub-app
-        run: pnpm typecheck
+        run: pnpm --filter @tonehub/desktop typecheck
 
       - name: Build Windows installers
         working-directory: tonehub-app

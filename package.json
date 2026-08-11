@@ -11,6 +11,6 @@
     "mobile": "pnpm --filter @tonehub/mobile start",
     "mobile:web": "pnpm --filter @tonehub/mobile web",
     "mobile:android": "pnpm --filter @tonehub/mobile android",
-    "typecheck": "pnpm -r --if-present typecheck"
+    "typecheck": "pnpm --filter @tonehub/desktop --filter @tonehub/mobile --if-present typecheck"
   }
 }

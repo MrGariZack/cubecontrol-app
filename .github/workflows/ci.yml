@@ -34,8 +34,8 @@ jobs:
           pnpm install --frozen-lockfile
           pnpm build
 
-      - name: Typecheck app
+      - name: Typecheck desktop
         working-directory: tonehub-app
         run: |
           pnpm install --frozen-lockfile
-          pnpm typecheck
+          pnpm --filter @tonehub/desktop typecheck
