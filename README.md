@@ -6,6 +6,7 @@ Hardware protocol lives in the sibling core: [cubecontrol](https://github.com/Mr
 | | |
 |--|--|
 | **Website** | https://mrgarizack.github.io/cubecontrol-app/ ([`site/`](site/)) |
+| **Telegram** | [CubeControl App](https://t.me/+fOVYVdn8-85mY2Zh) |
 | **App repo** | https://github.com/MrGariZack/cubecontrol-app |
 | **Core repo** | https://github.com/MrGariZack/cubecontrol |
 | **Downloads** | [Releases](https://github.com/MrGariZack/cubecontrol-app/releases) (Windows NSIS + portable) |
