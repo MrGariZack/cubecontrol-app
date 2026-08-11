@@ -1,0 +1,89 @@
+name: Release Windows
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout CubeControl app
+        uses: actions/checkout@v4
+        with:
+          path: tonehub-app
+
+      - name: Checkout ToneHub core
+        uses: actions/checkout@v4
+        with:
+          repository: MrGariZack/cubecontrol
+          path: Tonehub
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Build hardware core
+        working-directory: Tonehub
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm build
+
+      - name: Install app deps
+        working-directory: tonehub-app
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck app
+        working-directory: tonehub-app
+        run: pnpm typecheck
+
+      - name: Build Windows installers
+        working-directory: tonehub-app
+        env:
+          # electron-builder output (avoid Desktop/OneDrive locks in CI too)
+          CSC_IDENTITY_AUTO_DISCOVERY: "false"
+        run: pnpm desktop:dist
+
+      - name: Collect artifacts
+        shell: pwsh
+        run: |
+          $out = Join-Path $env:LOCALAPPDATA "CubeControl-build"
+          New-Item -ItemType Directory -Force -Path artifacts | Out-Null
+          Get-ChildItem $out -File -Filter "CubeControl-*.exe" | Copy-Item -Destination artifacts/
+          Get-ChildItem artifacts
+
+      - name: Upload artifacts (workflow)
+        uses: actions/upload-artifact@v4
+        with:
+          name: cubecontrol-windows
+          path: artifacts/*.exe
+
+      - name: Create GitHub Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: artifacts/*.exe
+          generate_release_notes: true
+          body: |
+            ## CubeControl ${{ github.ref_name }}
+
+            Unofficial CUBE Baby editor. **Read SAFETY before IR ROM writes.**
+
+            - Prefer **Cabinet 8** for new IRs
+            - Builds are **unsigned** — SmartScreen may warn
+            - Close CubeSuite before connecting
+
+            See [SAFETY.md](https://github.com/MrGariZack/cubecontrol-app/blob/master/apps/desktop/SAFETY.md) and [RELEASE.md](https://github.com/MrGariZack/cubecontrol-app/blob/master/apps/desktop/RELEASE.md).
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

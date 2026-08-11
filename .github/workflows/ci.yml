@@ -1,0 +1,41 @@
+name: CI
+
+on:
+  push:
+    branches: [master, main]
+  pull_request:
+
+jobs:
+  typecheck:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout app
+        uses: actions/checkout@v4
+        with:
+          path: tonehub-app
+
+      - name: Checkout core
+        uses: actions/checkout@v4
+        with:
+          repository: MrGariZack/cubecontrol
+          path: Tonehub
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Build core
+        working-directory: Tonehub
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm build
+
+      - name: Typecheck app
+        working-directory: tonehub-app
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm typecheck

@@ -1,74 +1,53 @@
 # CubeControl (tonehub-app)
 
-Product UI **CubeControl** for CUBE Baby. **Separate** from the hardware-core repo (`../Tonehub`).
+**Unofficial** desktop editor for the M-VAVE / Cuvave **CUBE Baby**.  
+Hardware protocol lives in the sibling core: [cubecontrol](https://github.com/MrGariZack/cubecontrol) (local folder `../Tonehub`).
 
-**Safety:** experimental USB writer — see [`apps/desktop/SAFETY.md`](apps/desktop/SAFETY.md). Not affiliated with M-VAVE. Use at your own risk; prefer IR uploads to Cabinet 8; export bank before risky ops.
+| | |
+|--|--|
+| **App repo** | https://github.com/MrGariZack/cubecontrol-app |
+| **Core repo** | https://github.com/MrGariZack/cubecontrol |
+| **Downloads** | [Releases](https://github.com/MrGariZack/cubecontrol-app/releases) (Windows NSIS + portable) |
+| **Version** | `0.1.0` — see [`CHANGELOG.md`](CHANGELOG.md) |
+| **Publish guide** | [`docs/PUBLISH.md`](docs/PUBLISH.md) |
 
-This repo owns screens, navigation, and (soon) native MIDI plugins.  
-Protocol, SysEx, IR math, and `CubeBabySession` stay in the core.
+**Safety:** experimental USB writer — [`apps/desktop/SAFETY.md`](apps/desktop/SAFETY.md). Not affiliated with M-VAVE. Prefer IR uploads to **Cabinet 8**; export bank before risky ops.
 
 ## Stack
 
-- **Desktop first (now):** Electron + React + `@tonehub/midi-transport-node` (USB real)
-- **Mobile later:** Expo + Android `NativeMidiHost` (USB). Bluetooth del CUBE Baby es solo audio/pistas — fuera de alcance MIDI.
+- **Desktop (now):** Electron + React + `@tonehub/midi-transport-node` (real USB)
+- **Mobile later:** Expo + Android `NativeMidiHost`
 - Core packages linked from sibling `../Tonehub/packages/*`
 
-## Setup
-
-Keep this folder next to the core: `Desktop/Tonehub` + `Desktop/tonehub-app`.
+## Setup (dev)
 
 ```sh
 # 1) Build the hardware core once
 cd ../Tonehub && pnpm install && pnpm build
 
-# 2) Install and run the desktop app (dev)
+# 2) Install and run the desktop app
 cd ../tonehub-app
 pnpm install
 pnpm desktop
 ```
 
-Cierra CubeSuite, conecta el CUBE Baby por USB y pulsa **Conectar USB**.
+Close CubeSuite, connect the CUBE Baby over USB, then **Connect USB**.
 
-### Windows installers
+### Windows installers (local)
 
 ```sh
 pnpm desktop:dist
 ```
 
-Salida en `%LOCALAPPDATA%\CubeControl-build\`:
+Output: `%LOCALAPPDATA%\CubeControl-build\` — details in [`apps/desktop/RELEASE.md`](apps/desktop/RELEASE.md).
 
-- **NSIS** `.exe` — instalador con accesos directos  
-- **Portable** `.exe` — sin instalación (bueno para testers)
-
-Guía completa: [`apps/desktop/RELEASE.md`](apps/desktop/RELEASE.md).  
-Seguridad: [`apps/desktop/SAFETY.md`](apps/desktop/SAFETY.md).
-
-> Builds tempranos **no están firmados**: Windows SmartScreen puede avisar. Es normal hasta tener certificado Authenticode.
-
-Mobile (demo fake, sin pedal):
-
-```sh
-pnpm mobile
-```
-
-## Boundary
-
-| Here (`tonehub-app`) | Core (`Tonehub`) |
-|---|---|
-| UI, UX, branding, installers | Protocol + CLI research |
-| `NativeMidiHost` plugins (Android/iOS) | `NativeMidiTransport` contract |
-| Confirm destructive actions in UI | Device operations API |
+> Early builds are **unsigned**: Windows SmartScreen may warn until Authenticode.
 
 ## Product / open core
 
-- **Open core & business boundary:** [`docs/open-core.md`](docs/open-core.md)  
-  (qué es MIT/local, qué será Pro/nube, qué **nunca** escribe el pedal desde la nube)
-- **Roadmap:** [`ROADMAP.md`](ROADMAP.md)
-- **Contribuir:** [`CONTRIBUTING.md`](CONTRIBUTING.md)
+- [`docs/open-core.md`](docs/open-core.md) — MIT local vs future Pro/cloud  
+- [`ROADMAP.md`](ROADMAP.md) · [`CONTRIBUTING.md`](CONTRIBUTING.md) · [`LICENSE`](LICENSE)
 
-## Next
+## License
 
-1. Public smoke + unsigned Windows builds for testers  
-2. Stabilize Shows → A/B/C flow for first-time users  
-3. Then: library sync MVP (see open-core) — not accounts-first  
-4. Later: mobile stage companion; marketplace last  
+MIT — [`LICENSE`](LICENSE). Desktop also ships [`apps/desktop/LICENSE.txt`](apps/desktop/LICENSE.txt) in the installer.
