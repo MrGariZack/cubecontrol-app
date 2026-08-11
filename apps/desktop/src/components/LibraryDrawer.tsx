@@ -17,6 +17,7 @@ type LibraryDrawerProps = {
   readonly variant?: "drawer" | "rail";
   readonly busy: boolean;
   readonly irCabinet: number;
+  readonly irDistance: number;
   readonly liveParams: LiveParamsSnapshot;
   readonly onClose?: () => void;
   readonly onStatus: (message: string | null) => void;
@@ -35,6 +36,8 @@ function emptyIndex(): LibraryIndex {
     irs: [],
     irBackups: [],
     packs: [],
+    songs: [],
+    shows: [],
   };
 }
 
@@ -43,6 +46,7 @@ export function LibraryDrawer({
   variant = "drawer",
   busy,
   irCabinet,
+  irDistance,
   liveParams,
   onClose,
   onStatus,
@@ -138,19 +142,32 @@ export function LibraryDrawer({
   async function loadIrToPedal(item: IrLibraryItem) {
     if (irCabinet !== 8) {
       const ok = window.confirm(
-        `¿Cargar «${item.name}» en Cabinet ${irCabinet}?\nSe hace backup ROM antes de escribir.`,
+        `RIESGO ALTO — ¿Cargar «${item.name}» en Cabinet ${irCabinet}?\n` +
+          `Puede pisar IR de fábrica. Backup local no es garantía absoluta.\n` +
+          `Prefiere Cab 8.`,
       );
       if (!ok) return;
+      // Electron does not support window.prompt().
+      const ok2 = window.confirm(
+        `ÚLTIMA CONFIRMACIÓN — ¿Sobreescribir Cab ${irCabinet} con «${item.name}» ahora?`,
+      );
+      if (!ok2) {
+        onStatus("Carga IR cancelada — segunda confirmación");
+        return;
+      }
     }
     onBusy(true);
     onError(null);
     try {
-      const result = await window.tonehubDesktop.library.loadIrToPedal(item.id, irCabinet);
+      const result = await window.tonehubDesktop.library.loadIrToPedal(item.id, irCabinet, {
+        confirmFactoryIrOverwrite: irCabinet !== 8,
+        distance: irDistance,
+      });
       onCabinetApplied(result.cabinet);
       await refresh();
       onStatus(
         result.persistVerified
-          ? `IR «${item.name}» → Cab ${result.cabinet} (backup guardado)`
+          ? `IR «${item.name}» → Cab ${result.cabinet} · dist ${Math.round(irDistance * 100)}%`
           : `IR escrito (verify falló) · Cab ${result.cabinet}`,
       );
     } catch (err) {

@@ -1,0 +1,53 @@
+appId: app.cubecontrol.desktop
+productName: CubeControl
+copyright: Copyright © CubeControl contributors
+artifactName: "${productName}-${version}-${os}-${arch}.${ext}"
+directories:
+  # Prefer CLI override to %LOCALAPPDATA%/CubeControl-build (see package.json scripts).
+  # Desktop/OneDrive often causes EPERM on win-unpacked rename.
+  output: out
+  buildResources: build
+files:
+  - dist/**/*
+  - dist-electron/**/*
+  - package.json
+  - "!**/*.map"
+asar: true
+asarUnpack:
+  - "**/*.node"
+  - "**/@julusian/midi/**"
+extraMetadata:
+  main: dist-electron/main.js
+npmRebuild: true
+nodeGypRebuild: false
+win:
+  icon: build/icon.ico
+  target:
+    - target: nsis
+      arch:
+        - x64
+    - target: portable
+      arch:
+        - x64
+  # Apply icon/metadata without Authenticode (unsigned early builds).
+  signAndEditExecutable: true
+  signExecutable: false
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: always
+  createStartMenuShortcut: true
+  shortcutName: CubeControl
+  uninstallDisplayName: CubeControl
+  license: LICENSE.txt
+  deleteAppDataOnUninstall: false
+  installerIcon: build/icon.ico
+  uninstallerIcon: build/icon.ico
+  installerHeaderIcon: build/icon.ico
+portable:
+  artifactName: "${productName}-${version}-portable.${ext}"
+extraResources:
+  - from: SAFETY.md
+    to: SAFETY.md
+  - from: build/icon.ico
+    to: icon.ico

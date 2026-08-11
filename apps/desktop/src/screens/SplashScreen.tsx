@@ -21,15 +21,15 @@ function useStableDone(onDone: () => void) {
 
 /** Demo tone so the faceplate looks alive during boot. */
 const SPLASH_PARAMS: LiveParamsSnapshot = {
-  type: 48,
-  gain: 96,
-  tone: 110,
-  reverb: 52,
+  type: 3,
+  gain: 5,
+  tone: 10,
+  reverb: 8,
   feedback: 64,
-  volume: 118,
-  time: 88,
+  volume: 100,
+  time: 16,
   mix: 72,
-  modulation: 36,
+  modulation: 8,
   cabinet: 3,
   irSection: 1,
   delaySection: 1,
@@ -130,6 +130,7 @@ export function SplashScreen({ onDone }: SplashScreenProps) {
           params={SPLASH_PARAMS}
           activeSlot="B"
           busy
+          showScope={false}
           onParamChange={() => undefined}
           onSelectSlot={() => undefined}
         />

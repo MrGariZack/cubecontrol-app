@@ -1,16 +1,25 @@
 {
   "name": "@tonehub/desktop",
-  "version": "0.0.0",
+  "productName": "CubeControl",
+  "version": "0.1.0",
+  "description": "CubeControl — USB editor for M-VAVE CUBE Baby (unofficial)",
+  "author": "CubeControl contributors",
+  "license": "MIT",
   "private": true,
   "type": "module",
   "main": "dist-electron/main.js",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -p tsconfig.node.json && vite build",
+    "build": "tsc -p tsconfig.node.json --noEmit && vite build",
     "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.node.json --noEmit",
-    "start": "vite"
+    "start": "vite",
+    "icons": "node scripts/make-icon.mjs",
+    "dist": "pnpm build && electron-builder --win --config electron-builder.yml -c.directories.output=%LOCALAPPDATA%/CubeControl-build",
+    "dist:dir": "pnpm build && electron-builder --win --dir --config electron-builder.yml -c.directories.output=%LOCALAPPDATA%/CubeControl-build",
+    "dist:portable": "pnpm build && electron-builder --win portable --config electron-builder.yml -c.directories.output=%LOCALAPPDATA%/CubeControl-build"
   },
   "dependencies": {
+    "@julusian/midi": "^3.8.1",
     "@tonehub/cube-baby-api": "workspace:*",
     "@tonehub/cube-baby-protocol": "workspace:*",
     "@tonehub/midi-core": "workspace:*",
@@ -28,6 +37,9 @@
     "@types/react-dom": "^19.2.2",
     "@vitejs/plugin-react": "^5.1.0",
     "electron": "^39.2.3",
+    "electron-builder": "^26.0.12",
+    "png-to-ico": "^3.0.2",
+    "sharp": "^0.35.3",
     "typescript": "~5.9.2",
     "vite": "^7.2.4",
     "vite-plugin-electron": "^0.29.0",

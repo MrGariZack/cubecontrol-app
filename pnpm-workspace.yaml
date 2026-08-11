@@ -8,3 +8,5 @@ onlyBuiltDependencies:
   - electron
   - "@julusian/midi"
   - esbuild
+  - electron-winstaller
+  - electron-builder

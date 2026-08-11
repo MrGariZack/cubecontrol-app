@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import type { PresetSlotId } from "@tonehub/cube-baby-protocol";
 import { SlotSwitcher } from "./SlotSwitcher";
 
-export type StudioNavId = "editor" | "library" | "device" | "tuner";
+export type StudioNavId = "editor" | "library" | "device" | "tuner" | "stage";
 
 type StudioSidebarProps = {
   readonly deviceName: string;
@@ -16,10 +16,10 @@ type StudioSidebarProps = {
 };
 
 const NAV_ITEMS: readonly { id: StudioNavId; label: string; hint: string }[] = [
-  { id: "editor", label: "Editor", hint: "Cadena y knobs" },
-  { id: "tuner", label: "Tuner", hint: "Afinar y octavar" },
-  { id: "library", label: "Library", hint: "Presets e IRs locales" },
-  { id: "device", label: "Device", hint: "Bank, IR, volumen" },
+  { id: "editor", label: "Editor", hint: "Pedal y knobs" },
+  { id: "tuner", label: "Tuner", hint: "Afinar" },
+  { id: "library", label: "Library", hint: "Tonos · shows" },
+  { id: "device", label: "Device", hint: "Bank e IR" },
 ];
 
 export function StudioSidebar({
@@ -32,8 +32,11 @@ export function StudioSidebar({
   onDisconnect,
   children,
 }: StudioSidebarProps) {
+  const hideChrome = nav === "stage";
+  if (hideChrome) return null;
+
   return (
-    <aside className={`studio-sidebar${nav === "library" ? " studio-sidebar--wide" : ""}`}>
+    <aside className="studio-sidebar">
       <div className="studio-sidebar__brand">
         <span className="studio-sidebar__logo">CubeControl</span>
         <span className="studio-sidebar__device" title={deviceName}>

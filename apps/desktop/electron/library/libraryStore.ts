@@ -12,7 +12,9 @@ import type {
   PackLibraryItem,
   PackManifest,
   PresetLibraryItem,
+  ShowLibraryItem,
   SlotDiffRow,
+  SongLibraryItem,
 } from "./types.js";
 import { LIVE_PARAM_NAMES } from "@tonehub/cube-baby-protocol";
 
@@ -25,6 +27,8 @@ function emptyIndex(): LibraryIndex {
     irs: [],
     irBackups: [],
     packs: [],
+    songs: [],
+    shows: [],
   };
 }
 
@@ -55,6 +59,12 @@ export class LibraryStore {
   packsDir(): string {
     return path.join(this.root, "packs");
   }
+  songsDir(): string {
+    return path.join(this.root, "songs");
+  }
+  showsDir(): string {
+    return path.join(this.root, "shows");
+  }
 
   async ensure(): Promise<void> {
     await this.#migrateLegacyToneHubFolder();
@@ -62,6 +72,8 @@ export class LibraryStore {
     await mkdir(this.irDir(), { recursive: true });
     await mkdir(this.historyIrDir(), { recursive: true });
     await mkdir(this.packsDir(), { recursive: true });
+    await mkdir(this.songsDir(), { recursive: true });
+    await mkdir(this.showsDir(), { recursive: true });
     const indexPath = path.join(this.root, INDEX_NAME);
     try {
       await readFile(indexPath, "utf8");
@@ -186,6 +198,131 @@ export class LibraryStore {
     await rm(path.join(this.irDir(), item.wavFile), { force: true });
     await rm(path.join(this.irDir(), `${id}.json`), { force: true });
     await this.#writeIndex({ ...index, irs: index.irs.filter((ir) => ir.id !== id) });
+  }
+
+  async saveSong(input: {
+    readonly name: string;
+    readonly notes?: string;
+    readonly tags?: readonly string[];
+    readonly presetId: string;
+    readonly irId?: string;
+    readonly irCabinet?: number;
+    readonly irDistance?: number;
+    readonly key?: string;
+    readonly bpm?: number;
+    readonly id?: string;
+  }): Promise<SongLibraryItem> {
+    await this.ensure();
+    const index = await this.#readIndex();
+    if (!index.presets.some((p) => p.id === input.presetId)) {
+      throw new Error("El tono ligado a la canción no existe");
+    }
+    if (input.irId !== undefined && !index.irs.some((ir) => ir.id === input.irId)) {
+      throw new Error("El IR ligado a la canción no existe");
+    }
+    const stamp = nowIso();
+    const id = input.id ?? randomUUID();
+    const existing = index.songs.find((item) => item.id === id);
+    const item: SongLibraryItem = {
+      id,
+      kind: "song",
+      name: input.name.trim() || "Canción sin nombre",
+      notes: input.notes?.trim() ?? "",
+      tags: [...(input.tags ?? [])],
+      presetId: input.presetId,
+      ...(input.irId === undefined ? {} : { irId: input.irId }),
+      ...(input.irCabinet === undefined ? {} : { irCabinet: input.irCabinet }),
+      ...(input.irDistance === undefined ? {} : { irDistance: input.irDistance }),
+      ...(input.key === undefined || input.key.trim() === "" ? {} : { key: input.key.trim() }),
+      ...(input.bpm === undefined || !Number.isFinite(input.bpm) ? {} : { bpm: input.bpm }),
+      createdAt: existing?.createdAt ?? stamp,
+      updatedAt: stamp,
+    };
+    const next = {
+      ...index,
+      songs: existing
+        ? index.songs.map((s) => (s.id === id ? item : s))
+        : [item, ...index.songs],
+    };
+    await writeFile(path.join(this.songsDir(), `${id}.json`), `${JSON.stringify(item, null, 2)}\n`);
+    await this.#writeIndex(next);
+    return item;
+  }
+
+  async deleteSong(id: string): Promise<void> {
+    const index = await this.#readIndex();
+    await rm(path.join(this.songsDir(), `${id}.json`), { force: true });
+    await this.#writeIndex({
+      ...index,
+      songs: index.songs.filter((item) => item.id !== id),
+      shows: index.shows.map((show) => ({
+        ...show,
+        songIds: show.songIds.filter((songId) => songId !== id),
+      })),
+    });
+  }
+
+  async saveShow(input: {
+    readonly name: string;
+    readonly notes?: string;
+    readonly songIds: readonly string[];
+    readonly id?: string;
+  }): Promise<ShowLibraryItem> {
+    await this.ensure();
+    const index = await this.#readIndex();
+    const stamp = nowIso();
+    const id = input.id ?? randomUUID();
+    const existing = index.shows.find((item) => item.id === id);
+    const known = new Set(index.songs.map((s) => s.id));
+    const songIds = input.songIds.filter((songId) => known.has(songId));
+    const item: ShowLibraryItem = {
+      id,
+      kind: "show",
+      name: input.name.trim() || "Show sin nombre",
+      notes: input.notes?.trim() ?? "",
+      songIds,
+      createdAt: existing?.createdAt ?? stamp,
+      updatedAt: stamp,
+    };
+    const next = {
+      ...index,
+      shows: existing
+        ? index.shows.map((s) => (s.id === id ? item : s))
+        : [item, ...index.shows],
+    };
+    await writeFile(path.join(this.showsDir(), `${id}.json`), `${JSON.stringify(item, null, 2)}\n`);
+    await this.#writeIndex(next);
+    return item;
+  }
+
+  async deleteShow(id: string): Promise<void> {
+    const index = await this.#readIndex();
+    await rm(path.join(this.showsDir(), `${id}.json`), { force: true });
+    await this.#writeIndex({
+      ...index,
+      shows: index.shows.filter((item) => item.id !== id),
+    });
+  }
+
+  /** Build a pack from a show (presets + IRs referenced by its songs). */
+  async exportShowAsPack(showId: string): Promise<PackLibraryItem> {
+    const index = await this.#readIndex();
+    const show = index.shows.find((s) => s.id === showId);
+    if (show === undefined) throw new Error("Show no encontrado");
+    const presetIds: string[] = [];
+    const irIds: string[] = [];
+    for (const songId of show.songIds) {
+      const song = index.songs.find((s) => s.id === songId);
+      if (song === undefined) continue;
+      if (!presetIds.includes(song.presetId)) presetIds.push(song.presetId);
+      if (song.irId !== undefined && !irIds.includes(song.irId)) irIds.push(song.irId);
+    }
+    return this.createPack({
+      name: `Show · ${show.name}`,
+      notes: show.notes || `Exportado desde show ${show.id}`,
+      presetIds,
+      irIds,
+    });
   }
 
   async saveIrBackup(input: {
@@ -467,11 +604,19 @@ export class LibraryStore {
 
   async #readIndex(): Promise<LibraryIndex> {
     const raw = await readFile(path.join(this.root, INDEX_NAME), "utf8");
-    const parsed = JSON.parse(raw) as LibraryIndex;
+    const parsed = JSON.parse(raw) as Partial<LibraryIndex>;
     if (parsed.format !== "tonehub-library-index-v1") {
       throw new Error("índice de biblioteca corrupto");
     }
-    return parsed;
+    return {
+      format: "tonehub-library-index-v1",
+      presets: parsed.presets ?? [],
+      irs: parsed.irs ?? [],
+      irBackups: parsed.irBackups ?? [],
+      packs: parsed.packs ?? [],
+      songs: parsed.songs ?? [],
+      shows: parsed.shows ?? [],
+    };
   }
 
   async #writeIndex(index: LibraryIndex): Promise<void> {

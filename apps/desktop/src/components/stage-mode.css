@@ -1,0 +1,136 @@
+.stage {
+  width: min(960px, 100%);
+  margin: 0 auto;
+  min-height: calc(100vh - 100px);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 28px;
+  padding: 12px 12px 28px;
+}
+
+.stage__bar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.stage__show {
+  margin: 0;
+  flex: 1;
+  font-family: "IBM Plex Mono", Consolas, monospace;
+  font-size: 13px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--mute);
+}
+
+.stage__count {
+  margin: 0;
+  font-family: "IBM Plex Mono", Consolas, monospace;
+  font-size: 14px;
+  color: var(--ink-soft);
+}
+
+.stage__exit {
+  min-height: 48px;
+  min-width: 96px;
+  padding: 10px 16px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--ink-soft);
+  font-weight: 600;
+}
+
+.stage__exit:focus-visible,
+.stage__btn:focus-visible {
+  outline: 2px solid rgba(196, 165, 116, 0.9);
+  outline-offset: 3px;
+}
+
+.stage__center {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 24px 8px;
+}
+
+.stage__now-label {
+  margin: 0;
+  font-family: "IBM Plex Mono", Consolas, monospace;
+  font-size: 12px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.stage__now {
+  margin: 0;
+  font-family: "Space Grotesk", sans-serif;
+  font-size: clamp(40px, 8vw, 72px);
+  font-weight: 700;
+  line-height: 1.05;
+  letter-spacing: -0.04em;
+  color: var(--ink);
+}
+
+.stage__next {
+  margin: 12px 0 0;
+  font-size: 20px;
+  color: var(--mute);
+}
+
+.stage__next span {
+  color: var(--ink-soft);
+}
+
+.stage__empty {
+  font-size: 22px;
+  color: var(--mute);
+}
+
+.stage__controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.stage__btn {
+  min-height: 56px;
+  min-width: 96px;
+  padding: 14px 20px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--ink);
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.stage__btn--primary {
+  background: rgba(46, 196, 182, 0.2);
+  border-color: rgba(46, 196, 182, 0.5);
+  color: var(--accent);
+  min-width: 160px;
+}
+
+.stage__btn:disabled {
+  opacity: 0.35;
+}
+
+.stage__hints {
+  margin: 0;
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  color: var(--mute);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stage__btn {
+    transition: none;
+  }
+}

@@ -1,5 +1,9 @@
 import { useEffect, useRef, useState } from "react";
-import type { LiveParamName } from "@tonehub/cube-baby-protocol";
+import {
+  isModulationOff,
+  LIVE_PARAM_MODULATION_OFF,
+  type LiveParamName,
+} from "@tonehub/cube-baby-protocol";
 
 export type PedalKnobTone = "volume" | "cab" | "delay" | "drive";
 
@@ -12,10 +16,14 @@ type PedalKnobProps = {
   /** False when the footswitch section for this group is off. */
   readonly sectionOn?: boolean;
   /**
-   * Forced off by a master control (e.g. Mix at 0 kills Mix/FB/Time together)
+   * Forced off by a master control (e.g. Mix at 0 kills Mix/FB/Time/MOD together)
    * even if this knobs still holds a non-zero value.
    */
   readonly effectOff?: boolean;
+  /**
+   * MOD: center 7–8 is off (chorus left / phaser right). Default knobs use 0 as off.
+   */
+  readonly bipolarCenterOff?: boolean;
   readonly tunerMark?: string;
   readonly iconMark?: "play" | "stop" | "back";
   readonly disabled?: boolean;
@@ -36,12 +44,25 @@ function clampValue(raw: number, max: number): number {
   return Math.max(0, Math.min(max, Math.round(raw)));
 }
 
-function snapTowardOff(raw: number, max: number): number {
-  if (max <= 0) return 0;
-  const threshold = Math.max(1, Math.round(max * OFF_SNAP_RATIO));
+function snapTowardOff(raw: number, max: number, bipolarCenterOff: boolean): number {
   const clamped = clampValue(raw, max);
+  if (bipolarCenterOff) {
+    // Snap to center OFF (8) when near 7–8.
+    if (isModulationOff(clamped) || Math.abs(clamped - LIVE_PARAM_MODULATION_OFF) <= 1) {
+      return LIVE_PARAM_MODULATION_OFF;
+    }
+    return clamped;
+  }
+  // Fine CubeSuite ranges (gain 0–7, type 0–8, time 0–31…): 1 is a real value — do not
+  // snap it to 0. Magnetic off only on wide knobs (mix/fb/volume).
+  if (max <= 31) return clamped;
+  const threshold = Math.max(1, Math.round(max * OFF_SNAP_RATIO));
   if (clamped <= threshold) return 0;
   return clamped;
+}
+
+function isAtOffStop(value: number, bipolarCenterOff: boolean): boolean {
+  return bipolarCenterOff ? isModulationOff(value) : value === 0;
 }
 
 export function PedalKnob({
@@ -52,6 +73,7 @@ export function PedalKnob({
   tone,
   sectionOn = true,
   effectOff = false,
+  bipolarCenterOff = false,
   tunerMark,
   iconMark,
   disabled = false,
@@ -68,7 +90,7 @@ export function PedalKnob({
 
   const sourceValue = dragValue ?? value;
   const clamped = clampValue(sourceValue, max);
-  const atOffStop = clamped === 0;
+  const atOffStop = isAtOffStop(clamped, bipolarCenterOff);
   const visuallyOff = atOffStop || effectOff || !sectionOn;
   const angle = valueToAngle(clamped, max);
 
@@ -78,18 +100,25 @@ export function PedalKnob({
   }, [value, dragging]);
 
   function emit(next: number, snap: boolean) {
-    const resolved = snap ? snapTowardOff(next, max) : clampValue(next, max);
+    const resolved = snap
+      ? snapTowardOff(next, max, bipolarCenterOff)
+      : clampValue(next, max);
+    const prev = dragValue ?? value;
     setDragValue(resolved);
-    onChange(param, resolved);
+    // Avoid flooding MIDI with identical values (was spamming modulation=0).
+    if (resolved !== clampValue(prev, max)) onChange(param, resolved);
     return resolved;
   }
 
   function endDrag(target: HTMLElement, pointerId: number) {
     const drag = dragRef.current;
     if (drag === null || drag.pointerId !== pointerId) return;
-    const snapped = snapTowardOff(dragValue ?? value, max);
+    const snapped = snapTowardOff(dragValue ?? value, max, bipolarCenterOff);
+    const prev = clampValue(dragValue ?? value, max);
     setDragValue(snapped);
-    onChange(param, snapped);
+    if (snapped !== prev || snapped !== clampValue(value, max)) {
+      onChange(param, snapped);
+    }
     dragRef.current = null;
     setDragging(false);
     if (target.hasPointerCapture(pointerId)) {
@@ -114,7 +143,9 @@ export function PedalKnob({
     : effectOff && !atOffStop
       ? `${label}: OFF (Mix en 0 apaga Mix/FB/Time)`
       : atOffStop
-        ? `${label}: OFF (tope mínimo)`
+        ? bipolarCenterOff
+          ? `${label}: OFF (centro 7–8)`
+          : `${label}: OFF (tope mínimo)`
         : `${label}: ${clamped}`;
 
   return (
@@ -152,7 +183,8 @@ export function PedalKnob({
         onPointerMove={(event) => {
           const drag = dragRef.current;
           if (drag === null || drag.pointerId !== event.pointerId || disabled) return;
-          const sensitivity = max <= 8 ? 0.045 : 0.85;
+          // Fine drag for small CubeSuite ranges (gain 0–7, mod 0–15, time 0–31…).
+          const sensitivity = max <= 31 ? 0.06 : 0.85;
           const next = drag.startValue - (event.clientY - drag.startY) * sensitivity;
           // No magnetic snap while dragging — keeps motion continuous.
           emit(next, false);
@@ -165,7 +197,7 @@ export function PedalKnob({
         }}
         onLostPointerCapture={() => {
           if (dragRef.current === null) return;
-          const snapped = snapTowardOff(dragValue ?? value, max);
+          const snapped = snapTowardOff(dragValue ?? value, max, bipolarCenterOff);
           setDragValue(snapped);
           onChange(param, snapped);
           dragRef.current = null;
@@ -174,9 +206,9 @@ export function PedalKnob({
         onWheel={(event) => {
           if (disabled || dragging) return;
           event.preventDefault();
-          const step = max <= 8 ? 1 : event.shiftKey ? 8 : 2;
+          const step = max <= 31 ? 1 : event.shiftKey ? 8 : 2;
           const next = clampValue(value, max) + (event.deltaY > 0 ? -step : step);
-          onChange(param, snapTowardOff(next, max));
+          onChange(param, snapTowardOff(next, max, bipolarCenterOff));
         }}
         onKeyDown={(event) => {
           if (disabled) return;
@@ -186,7 +218,7 @@ export function PedalKnob({
           } else if (event.key === "ArrowDown" || event.key === "ArrowLeft") {
             onChange(param, clampValue(base - 1, max));
           } else if (event.key === "Home") {
-            onChange(param, 0);
+            onChange(param, bipolarCenterOff ? LIVE_PARAM_MODULATION_OFF : 0);
           }
         }}
       >

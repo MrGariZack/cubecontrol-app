@@ -127,6 +127,16 @@ button:disabled {
   font-size: 14px;
 }
 
+.connect__safety {
+  margin: 16px 0 0;
+  max-width: 420px;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--mute);
+  border-left: 2px solid color-mix(in srgb, var(--danger) 55%, var(--line));
+  padding-left: 12px;
+}
+
 /* —— Studio shell (Cortex-like) —— */
 .studio {
   height: 100vh;
@@ -180,6 +190,33 @@ button:disabled {
   background:
     radial-gradient(700px 280px at 50% 0%, rgba(46, 196, 182, 0.08), transparent 55%),
     linear-gradient(180deg, #0b0e13 0%, #07090c 100%);
+}
+
+.studio__main--wide {
+  justify-content: flex-start;
+  align-items: stretch;
+  padding: 12px 20px 28px;
+  overflow: auto;
+  background:
+    radial-gradient(800px 320px at 20% 0%, rgba(196, 165, 116, 0.06), transparent 50%),
+    linear-gradient(180deg, #0b0e13 0%, #07090c 100%);
+}
+
+.studio--stage .studio__workspace {
+  width: 100%;
+}
+
+.studio--stage .studio-toolbar {
+  display: none;
+}
+
+.studio-toolbar__show {
+  max-width: 240px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  border-color: rgba(196, 165, 116, 0.35) !important;
+  color: #e8d4b0 !important;
 }
 
 /* —— Left sidebar —— */
@@ -369,6 +406,22 @@ button:disabled {
   background: var(--accent-dim);
   border-color: color-mix(in srgb, var(--accent) 45%, var(--line));
   color: var(--ink);
+}
+
+.studio-toolbar__copy {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.studio-toolbar__copy-label {
+  margin-left: 2px;
+  margin-right: 2px;
+  color: var(--mute);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 
 .studio-toolbar__divider {
@@ -617,11 +670,40 @@ button:disabled {
   color: var(--mute);
 }
 
+.device-panel__warn {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 16px;
+  padding: 10px 12px;
+  border: 1px solid color-mix(in srgb, var(--danger) 40%, var(--line));
+  background: color-mix(in srgb, var(--danger) 8%, transparent);
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--ink-soft);
+}
+
+.device-panel__warn strong {
+  color: var(--danger);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.device-panel__warn code {
+  font-size: 10px;
+  color: var(--mute);
+}
+
 .device-panel__group {
   display: flex;
   flex-direction: column;
   gap: 8px;
   margin-bottom: 18px;
+}
+
+.device-panel__group .mic-dist {
+  margin-top: 2px;
 }
 
 .device-panel__label {
@@ -903,6 +985,23 @@ button:disabled {
   font-size: 12px;
 }
 
+.compare-panel__hint {
+  margin: 0 0 10px;
+  color: var(--ink-soft);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.compare-panel__dirty {
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  border: 1px solid color-mix(in srgb, var(--danger) 45%, var(--line));
+  background: color-mix(in srgb, var(--danger) 12%, transparent);
+  color: var(--ink);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
 .compare-panel__sub {
   margin: 8px 0 14px;
   color: var(--mute);
@@ -913,6 +1012,11 @@ button:disabled {
   width: 100%;
   border-collapse: collapse;
   font-size: 13px;
+}
+
+.compare-panel__table td.is-live-diff {
+  color: var(--accent);
+  font-weight: 700;
 }
 
 .compare-panel__table th,
@@ -1034,6 +1138,49 @@ button:disabled {
   padding: 8px 10px;
   font-size: 12px;
   font-weight: 700;
+}
+
+.compare-panel__copy {
+  margin: 0 0 12px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  background: color-mix(in srgb, var(--bg-2) 80%, transparent);
+}
+
+.compare-panel__copy-head {
+  display: grid;
+  gap: 4px;
+  margin-bottom: 10px;
+}
+
+.compare-panel__copy-head strong {
+  font-size: 13px;
+}
+
+.compare-panel__copy-head span {
+  color: var(--ink-soft);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.compare-panel__copy-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.compare-panel__copy-actions button {
+  border: 1px solid var(--line);
+  background: var(--bg-3);
+  color: var(--ink);
+  padding: 8px 10px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.compare-panel__copy-actions button:hover:not(:disabled) {
+  border-color: color-mix(in srgb, var(--accent) 50%, var(--line));
+  background: var(--accent-dim);
 }
 
 @media (max-width: 980px) {

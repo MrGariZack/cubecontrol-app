@@ -1,12 +1,19 @@
-import type { LiveParamName, PresetSlotId } from "@tonehub/cube-baby-protocol";
+import {
+  LIVE_PARAM_MAX,
+  type LiveParamName,
+  type PresetSlotId,
+} from "@tonehub/cube-baby-protocol";
 import type { LiveParamsSnapshot } from "../../types/device";
 import { PedalKnob } from "./PedalKnob";
+import { SignalScope } from "./SignalScope";
 import "./cube-baby-pedal.css";
 
 type CubeBabyPedalProps = {
   readonly params: LiveParamsSnapshot;
   readonly activeSlot: PresetSlotId;
   readonly busy?: boolean;
+  /** Spectrum / mini-game — off on splash and other non-studio embeds. */
+  readonly showScope?: boolean;
   readonly onParamChange: (param: LiveParamName, value: number) => void;
   readonly onSelectSlot: (slot: PresetSlotId) => void;
 };
@@ -17,18 +24,20 @@ type KnobSpec = {
   readonly max: number;
   readonly tone: "volume" | "cab" | "delay" | "drive";
   readonly section?: "irSection" | "delaySection" | "toneSection";
-  /** Part of Mix/FB/Time cluster: Mix at 0 forces the whole cluster off. */
+  /** Part of Mix/FB/Time/MOD cluster: Mix at 0 shows the cluster as off. */
   readonly delayTimeCluster?: boolean;
+  /** MOD: center (7–8) is off; 0 is chorus, not off. */
+  readonly bipolarCenterOff?: boolean;
   readonly tunerMark?: string;
   readonly iconMark?: "play" | "stop" | "back";
 };
 
 const KNOBS: readonly KnobSpec[] = [
-  { param: "volume", label: "VOLUME", max: 255, tone: "volume" },
+  { param: "volume", label: "VOLUME", max: LIVE_PARAM_MAX.volume, tone: "volume" },
   {
     param: "cabinet",
     label: "IR CAB",
-    max: 8,
+    max: LIVE_PARAM_MAX.cabinet,
     tone: "cab",
     section: "irSection",
     tunerMark: "E",
@@ -36,7 +45,7 @@ const KNOBS: readonly KnobSpec[] = [
   {
     param: "reverb",
     label: "REVERB",
-    max: 255,
+    max: LIVE_PARAM_MAX.reverb,
     tone: "cab",
     section: "irSection",
     tunerMark: "A",
@@ -44,7 +53,7 @@ const KNOBS: readonly KnobSpec[] = [
   {
     param: "mix",
     label: "MIX",
-    max: 255,
+    max: LIVE_PARAM_MAX.mix,
     tone: "delay",
     section: "delaySection",
     delayTimeCluster: true,
@@ -53,7 +62,7 @@ const KNOBS: readonly KnobSpec[] = [
   {
     param: "feedback",
     label: "FB",
-    max: 255,
+    max: LIVE_PARAM_MAX.feedback,
     tone: "delay",
     section: "delaySection",
     delayTimeCluster: true,
@@ -62,24 +71,27 @@ const KNOBS: readonly KnobSpec[] = [
   {
     param: "time",
     label: "TIME",
-    max: 255,
+    max: LIVE_PARAM_MAX.time,
     tone: "delay",
     section: "delaySection",
     delayTimeCluster: true,
     tunerMark: "B",
   },
   {
+    // Bipolar: 0–6 chorus, 7–8 off, 9–15 phaser. Independent of Mix (delay wet).
+    // Full MOD+DLY mute = footswitch B / delaySection only.
     param: "modulation",
     label: "MOD",
-    max: 255,
+    max: LIVE_PARAM_MAX.modulation,
     tone: "delay",
     section: "delaySection",
+    bipolarCenterOff: true,
     tunerMark: "E",
   },
   {
     param: "tone",
     label: "TONE",
-    max: 255,
+    max: LIVE_PARAM_MAX.tone,
     tone: "drive",
     section: "toneSection",
     iconMark: "play",
@@ -87,7 +99,7 @@ const KNOBS: readonly KnobSpec[] = [
   {
     param: "gain",
     label: "GAIN",
-    max: 255,
+    max: LIVE_PARAM_MAX.gain,
     tone: "drive",
     section: "toneSection",
     iconMark: "stop",
@@ -95,7 +107,7 @@ const KNOBS: readonly KnobSpec[] = [
   {
     param: "type",
     label: "TYPE",
-    max: 255,
+    max: LIVE_PARAM_MAX.type,
     tone: "drive",
     section: "toneSection",
     iconMark: "back",
@@ -106,6 +118,7 @@ export function CubeBabyPedal({
   params,
   activeSlot,
   busy = false,
+  showScope = true,
   onParamChange,
   onSelectSlot,
 }: CubeBabyPedalProps) {
@@ -116,6 +129,7 @@ export function CubeBabyPedal({
 
   return (
     <div className="cube-stage" aria-label="CUBE Baby virtual">
+      {showScope ? <SignalScope /> : null}
       <div className="cube-jacks" aria-hidden>
         <span className="cube-jacks__jack" />
         <span className="cube-jacks__switch" />
@@ -153,6 +167,7 @@ export function CubeBabyPedal({
                 tone={knob.tone}
                 sectionOn={sectionOn}
                 effectOff={effectOff}
+                bipolarCenterOff={Boolean(knob.bipolarCenterOff)}
                 {...(knob.tunerMark === undefined ? {} : { tunerMark: knob.tunerMark })}
                 {...(knob.iconMark === undefined ? {} : { iconMark: knob.iconMark })}
                 disabled={busy}
@@ -208,7 +223,7 @@ export function CubeBabyPedal({
       </div>
 
       <p className="cube-stage__hint">
-        Mix en 0 apaga Mix/FB/Time · LED de arco apaga el grupo · A/B/C cambia slot
+        Mix en 0 apaga Mix/FB/Time · LED o pad activo apaga el grupo · A/B/C cambia slot
       </p>
     </div>
   );
@@ -237,10 +252,24 @@ function Footswitch({
   onSelect,
   onToggleLed,
 }: FootswitchProps) {
+  // Active pad would be a no-op for slot change — use it to toggle this foot's
+  // section (Delay on B, Tone on C). Matches how users try to mute while on B/C.
+  function onPadClick() {
+    if (active) onToggleLed();
+    else onSelect();
+  }
+
   return (
     <div className={`cube-fs${active ? " is-active" : ""}`}>
       <div className="cube-fs__arc">
-        <span>{leftLabel}</span>
+        <button
+          type="button"
+          className="cube-fs__arc-label"
+          disabled={disabled}
+          onClick={onToggleLed}
+        >
+          {leftLabel}
+        </button>
         <button
           type="button"
           className={`cube-fs__led cube-fs__led--${ledTone}${ledOn ? " is-on" : ""}`}
@@ -248,15 +277,26 @@ function Footswitch({
           disabled={disabled}
           onClick={onToggleLed}
         />
-        <span>{rightLabel}</span>
+        <button
+          type="button"
+          className="cube-fs__arc-label"
+          disabled={disabled}
+          onClick={onToggleLed}
+        >
+          {rightLabel}
+        </button>
       </div>
       <button
         type="button"
         className="cube-fs__switch"
         disabled={disabled}
         aria-pressed={active}
-        aria-label={`Footswitch ${slot}`}
-        onClick={onSelect}
+        aria-label={
+          active
+            ? `Footswitch ${slot}: toggle ${leftLabel}/${rightLabel}`
+            : `Footswitch ${slot}`
+        }
+        onClick={onPadClick}
       >
         <span className="cube-fs__metal" aria-hidden />
       </button>

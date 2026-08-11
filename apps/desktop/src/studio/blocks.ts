@@ -1,4 +1,4 @@
-import type { LiveParamName } from "@tonehub/cube-baby-protocol";
+import { LIVE_PARAM_MAX, type LiveParamName } from "@tonehub/cube-baby-protocol";
 
 export type BlockId = "drive" | "delay" | "reverb" | "modulation" | "cabinet" | "output";
 
@@ -27,9 +27,9 @@ export const BLOCKS: readonly BlockDef[] = [
     short: "DRV",
     accent: "#2EC4B6",
     knobs: [
-      { param: "type", label: "Type", max: 255 },
-      { param: "gain", label: "Gain", max: 255 },
-      { param: "tone", label: "Tone", max: 255 },
+      { param: "type", label: "Type", max: LIVE_PARAM_MAX.type },
+      { param: "gain", label: "Gain", max: LIVE_PARAM_MAX.gain },
+      { param: "tone", label: "Tone", max: LIVE_PARAM_MAX.tone },
     ],
     toggle: { param: "toneSection", label: "Tone sec" },
   },
@@ -39,9 +39,9 @@ export const BLOCKS: readonly BlockDef[] = [
     short: "DLY",
     accent: "#7C9CFF",
     knobs: [
-      { param: "time", label: "Time", max: 255 },
-      { param: "feedback", label: "Feedback", max: 255 },
-      { param: "mix", label: "Mix", max: 255 },
+      { param: "time", label: "Time", max: LIVE_PARAM_MAX.time },
+      { param: "feedback", label: "Feedback", max: LIVE_PARAM_MAX.feedback },
+      { param: "mix", label: "Mix", max: LIVE_PARAM_MAX.mix },
     ],
     toggle: { param: "delaySection", label: "Delay sec" },
   },
@@ -50,21 +50,21 @@ export const BLOCKS: readonly BlockDef[] = [
     label: "Reverb",
     short: "RVB",
     accent: "#5AD1C3",
-    knobs: [{ param: "reverb", label: "Reverb", max: 255 }],
+    knobs: [{ param: "reverb", label: "Reverb", max: LIVE_PARAM_MAX.reverb }],
   },
   {
     id: "modulation",
     label: "Modulation",
     short: "MOD",
     accent: "#4F8CFF",
-    knobs: [{ param: "modulation", label: "Depth", max: 255 }],
+    knobs: [{ param: "modulation", label: "Depth", max: LIVE_PARAM_MAX.modulation }],
   },
   {
     id: "cabinet",
     label: "Cabinet",
     short: "CAB",
     accent: "#9AA4B2",
-    knobs: [{ param: "cabinet", label: "Cabinet", max: 8 }],
+    knobs: [{ param: "cabinet", label: "Cabinet", max: LIVE_PARAM_MAX.cabinet }],
     toggle: { param: "irSection", label: "IR sec" },
   },
   {
@@ -72,7 +72,7 @@ export const BLOCKS: readonly BlockDef[] = [
     label: "Output",
     short: "OUT",
     accent: "#6EE7B7",
-    knobs: [{ param: "volume", label: "Volume", max: 255 }],
+    knobs: [{ param: "volume", label: "Volume", max: LIVE_PARAM_MAX.volume }],
   },
 ];
 

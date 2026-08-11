@@ -5,6 +5,9 @@
   "packageManager": "pnpm@10.34.1",
   "scripts": {
     "desktop": "pnpm --filter @tonehub/desktop dev",
+    "desktop:build": "pnpm --filter @tonehub/desktop build",
+    "desktop:dist": "pnpm --filter @tonehub/desktop dist",
+    "desktop:dist:dir": "pnpm --filter @tonehub/desktop dist:dir",
     "mobile": "pnpm --filter @tonehub/mobile start",
     "mobile:web": "pnpm --filter @tonehub/mobile web",
     "mobile:android": "pnpm --filter @tonehub/mobile android",

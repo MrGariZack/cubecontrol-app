@@ -1,0 +1,318 @@
+.mic-dist {
+  width: min(860px, 94%);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 2px;
+  user-select: none;
+  touch-action: none;
+}
+
+.mic-dist--compact {
+  width: 100%;
+  margin: 0;
+}
+
+.mic-dist.is-disabled {
+  opacity: 0.45;
+  pointer-events: none;
+}
+
+.mic-dist__meta {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 0 4px;
+}
+
+.mic-dist__tag {
+  font-family: "IBM Plex Mono", "Consolas", monospace;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.22em;
+  color: #c4a574;
+}
+
+.mic-dist__hint {
+  flex: 1;
+  font-family: "IBM Plex Mono", "Consolas", monospace;
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  color: var(--mute);
+}
+
+.mic-dist__readout {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+  font-family: "IBM Plex Mono", "Consolas", monospace;
+  color: var(--ink);
+}
+
+.mic-dist__pct {
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+  color: #e8d4b0;
+}
+
+.mic-dist__unit {
+  font-size: 10px;
+  color: var(--mute);
+  margin-right: 6px;
+}
+
+.mic-dist__float {
+  font-size: 10px;
+  color: var(--mute);
+  letter-spacing: 0.06em;
+}
+
+.mic-dist__stage {
+  position: relative;
+  height: 56px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background:
+    linear-gradient(180deg, rgba(28, 24, 20, 0.95) 0%, rgba(8, 9, 10, 0.98) 100%);
+  box-shadow:
+    0 8px 22px rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  overflow: hidden;
+  cursor: grab;
+  outline: none;
+  --mic-inset-l: 62px;
+  --mic-inset-r: 56px;
+}
+
+.mic-dist__stage:active {
+  cursor: grabbing;
+}
+
+.mic-dist__stage:focus-visible {
+  border-color: rgba(196, 165, 116, 0.55);
+  box-shadow:
+    0 0 0 1px rgba(196, 165, 116, 0.35),
+    0 8px 22px rgba(0, 0, 0, 0.4);
+}
+
+.mic-dist--compact .mic-dist__stage {
+  height: 48px;
+  --mic-inset-l: 48px;
+  --mic-inset-r: 14px;
+}
+
+.mic-dist__cab {
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 44px;
+  height: 44px;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.mic-dist__cab-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 1.5px solid rgba(196, 165, 116, 0.35);
+}
+
+.mic-dist__cab-ring--outer {
+  background:
+    radial-gradient(circle at 50% 45%, #3a342c 0%, #1a1714 55%, #0a0908 100%);
+  box-shadow: inset 0 0 12px rgba(0, 0, 0, 0.65);
+}
+
+.mic-dist__cab-ring--mid {
+  inset: 9px;
+  border-color: rgba(232, 212, 176, 0.25);
+  background: radial-gradient(circle at 50% 40%, #2a2620, #12100e);
+}
+
+.mic-dist__cab-ring--dust {
+  inset: 16px;
+  border: none;
+  background: radial-gradient(circle at 40% 35%, #6a5e4e, #1c1814 70%);
+  box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.12);
+}
+
+.mic-dist__cab-label {
+  position: absolute;
+  left: 52px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-family: "IBM Plex Mono", "Consolas", monospace;
+  font-size: 8px;
+  letter-spacing: 0.18em;
+  color: rgba(232, 212, 176, 0.45);
+}
+
+.mic-dist__cab-label--far {
+  left: auto;
+  right: 10px;
+  color: rgba(160, 190, 200, 0.4);
+}
+
+.mic-dist__path {
+  position: absolute;
+  left: 62px;
+  right: 56px;
+  top: 50%;
+  height: 2px;
+  transform: translateY(-50%);
+  background: linear-gradient(
+    90deg,
+    rgba(196, 165, 116, 0.55),
+    rgba(46, 196, 182, 0.25) 55%,
+    rgba(120, 160, 180, 0.35)
+  );
+  border-radius: 1px;
+  z-index: 1;
+}
+
+.mic-dist__glow {
+  position: absolute;
+  left: -8%;
+  top: 50%;
+  width: 42%;
+  height: 28px;
+  transform: translateY(-50%);
+  background: radial-gradient(ellipse at left, rgba(232, 180, 90, 0.35), transparent 70%);
+  pointer-events: none;
+  transition: opacity 80ms linear;
+}
+
+.mic-dist__ticks {
+  position: absolute;
+  inset: -6px 0 auto;
+  height: 14px;
+}
+
+.mic-dist__ticks i {
+  position: absolute;
+  top: 0;
+  width: 1px;
+  height: 6px;
+  background: rgba(238, 241, 245, 0.22);
+  transform: translateX(-50%);
+}
+
+.mic-dist__waves {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  width: 70%;
+  height: 36px;
+  transform-origin: left center;
+  background:
+    repeating-radial-gradient(
+      circle at 0% 50%,
+      transparent 0 5px,
+      rgba(232, 180, 90, 0.12) 5px 6px
+    );
+  mask-image: linear-gradient(90deg, rgba(0, 0, 0, 0.85), transparent 92%);
+  pointer-events: none;
+  transition: opacity 80ms linear;
+}
+
+.mic-dist__mic {
+  position: absolute;
+  top: 50%;
+  z-index: 3;
+  transform: translate(-50%, -50%);
+  width: 22px;
+  height: 36px;
+  transition: left 40ms linear;
+  pointer-events: none;
+}
+
+.mic-dist__mic-body {
+  display: block;
+  width: 18px;
+  height: 28px;
+  margin: 0 auto;
+  border-radius: 9px 9px 6px 6px;
+  background:
+    linear-gradient(180deg, #d8dde4 0%, #8b93a0 40%, #4a5160 100%);
+  box-shadow:
+    0 2px 6px rgba(0, 0, 0, 0.45),
+    inset 0 1px 0 rgba(255, 255, 255, 0.45);
+  position: relative;
+}
+
+.mic-dist__mic-grill {
+  position: absolute;
+  left: 3px;
+  right: 3px;
+  top: 5px;
+  height: 12px;
+  border-radius: 4px;
+  background:
+    repeating-linear-gradient(
+      180deg,
+      rgba(20, 24, 30, 0.55) 0 1px,
+      transparent 1px 3px
+    );
+}
+
+.mic-dist__mic-shadow {
+  display: block;
+  width: 20px;
+  height: 4px;
+  margin: 3px auto 0;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.4);
+  filter: blur(1px);
+}
+
+.mic-dist__room {
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 38%;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.mic-dist__room-haze {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(90deg, transparent, rgba(90, 130, 150, 0.12) 40%, rgba(70, 110, 130, 0.22));
+  transition: opacity 80ms linear;
+}
+
+.mic-dist__foot {
+  margin: 0;
+  padding: 0 4px;
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  color: var(--mute);
+}
+
+.mic-dist--compact .mic-dist__foot {
+  display: none;
+}
+
+.mic-dist--compact .mic-dist__cab {
+  width: 36px;
+  height: 36px;
+}
+
+.mic-dist--compact .mic-dist__cab-label {
+  display: none;
+}
+
+.mic-dist--compact .mic-dist__path {
+  left: 48px;
+  right: 14px;
+}
+
+.mic-dist--compact .mic-dist__pct {
+  font-size: 15px;
+}

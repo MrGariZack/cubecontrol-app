@@ -4,6 +4,8 @@ export type LiveParamsSnapshot = Record<LiveParamName, number>;
 
 export type LibraryProfile = "ensayo" | "directo" | "grabacion" | "otro";
 
+export const FAVORITE_TAG = "favorite";
+
 export type PresetLibraryItem = {
   readonly id: string;
   readonly kind: "preset";
@@ -63,12 +65,42 @@ export type PackLibraryItem = {
   readonly hasBank: boolean;
 };
 
+/** Musical cue: links a library tone (+ optional IR) for shows. */
+export type SongLibraryItem = {
+  readonly id: string;
+  readonly kind: "song";
+  readonly name: string;
+  readonly notes: string;
+  readonly tags: readonly string[];
+  readonly presetId: string;
+  readonly irId?: string;
+  readonly irCabinet?: number;
+  readonly irDistance?: number;
+  readonly key?: string;
+  readonly bpm?: number;
+  readonly createdAt: string;
+  readonly updatedAt: string;
+};
+
+/** Ordered setlist of songs. */
+export type ShowLibraryItem = {
+  readonly id: string;
+  readonly kind: "show";
+  readonly name: string;
+  readonly notes: string;
+  readonly songIds: readonly string[];
+  readonly createdAt: string;
+  readonly updatedAt: string;
+};
+
 export type LibraryIndex = {
   readonly format: "tonehub-library-index-v1";
   readonly presets: PresetLibraryItem[];
   readonly irs: IrLibraryItem[];
   readonly irBackups: IrBackupItem[];
   readonly packs: PackLibraryItem[];
+  readonly songs: SongLibraryItem[];
+  readonly shows: ShowLibraryItem[];
 };
 
 export type LiveSnapshot = {

@@ -1,25 +1,39 @@
 import type { PresetSlotId } from "@tonehub/cube-baby-protocol";
 import type { MatchVolumesSource } from "../../electron/deviceBridge";
 import type { SlotDiffRow } from "../../electron/library/types";
+import type { LiveParamsSnapshot } from "../types/device";
+
+const SLOT_PAIRS: readonly { from: PresetSlotId; to: PresetSlotId }[] = [
+  { from: "A", to: "B" },
+  { from: "A", to: "C" },
+  { from: "B", to: "A" },
+  { from: "B", to: "C" },
+  { from: "C", to: "A" },
+  { from: "C", to: "B" },
+];
 
 type ComparePanelProps = {
   readonly open: boolean;
   readonly rows: readonly SlotDiffRow[];
   readonly busy: boolean;
-  readonly liveVolume: number;
+  readonly liveParams: LiveParamsSnapshot;
+  readonly liveDirty: boolean;
   readonly activeSlot: PresetSlotId;
   readonly onClose: () => void;
   readonly onMatchVolumes: (source: MatchVolumesSource) => void;
+  readonly onCopySlot: (from: PresetSlotId, to: PresetSlotId) => void;
 };
 
 export function ComparePanel({
   open,
   rows,
   busy,
-  liveVolume,
+  liveParams,
+  liveDirty,
   activeSlot,
   onClose,
   onMatchVolumes,
+  onCopySlot,
 }: ComparePanelProps) {
   if (!open) return null;
 
@@ -28,6 +42,7 @@ export function ComparePanel({
   const ordered = volumeRow === undefined ? rows : [volumeRow, ...otherRows];
   const diffs = rows.filter((row) => row.differs);
   const volumeDiffers = volumeRow?.differs ?? false;
+  const liveVolume = liveParams.volume;
 
   return (
     <div className="compare-panel" role="dialog" aria-label="Comparar slots A B C">
@@ -37,6 +52,19 @@ export function ComparePanel({
           Cerrar
         </button>
       </div>
+
+      <p className="compare-panel__hint">
+        La tabla es el <strong>bank guardado</strong> del pedal (lo que queda tras Guardar). Mover
+        knobs solo cambia el live hasta que guardas o copias.
+      </p>
+
+      {liveDirty ? (
+        <p className="compare-panel__dirty" role="status">
+          Live {activeSlot} tiene cambios sin Guardar — lo que oyes puede no coincidir con la
+          columna {activeSlot}. Al copiar desde {activeSlot} te pediremos si quieres el live o
+          cancelar.
+        </p>
+      ) : null}
 
       {volumeRow ? (
         <section
@@ -72,7 +100,10 @@ export function ComparePanel({
               </div>
             ))}
             <div className="compare-panel__meter compare-panel__meter--live">
-              <span className="compare-panel__meter-label">Live ({activeSlot})</span>
+              <span className="compare-panel__meter-label">
+                Live ({activeSlot})
+                {liveDirty ? " *" : ""}
+              </span>
               <div className="compare-panel__meter-track">
                 <div
                   className="compare-panel__meter-fill"
@@ -119,10 +150,38 @@ export function ComparePanel({
         </section>
       ) : null}
 
+      <section className="compare-panel__copy">
+        <div className="compare-panel__copy-head">
+          <strong>Copiar preset</strong>
+          <span>
+            Por defecto clona el BANK (guardado). Si el origen es el slot live con cambios sin
+            Guardar, te pedirá confirmar copiar lo que oyes.
+          </span>
+        </div>
+        <div className="compare-panel__copy-actions">
+          {SLOT_PAIRS.map(({ from, to }) => (
+            <button
+              key={`${from}-${to}`}
+              type="button"
+              disabled={busy}
+              onClick={() => onCopySlot(from, to)}
+              title={
+                liveDirty && from === activeSlot
+                  ? `Live ${from} sucio — confirmará copiar live → ${to}`
+                  : `Copia el bank slot ${from} sobre ${to}`
+              }
+            >
+              {from}→{to}
+              {liveDirty && from === activeSlot ? " *" : ""}
+            </button>
+          ))}
+        </div>
+      </section>
+
       <p className="compare-panel__sub">
         {diffs.length === 0
-          ? "Los tres slots son idénticos en live params."
-          : `${diffs.length} parámetros difieren entre slots.`}
+          ? "Los tres slots del bank son idénticos."
+          : `${diffs.length} parámetros difieren entre slots del bank.`}
       </p>
       <table className="compare-panel__table">
         <thead>
@@ -131,28 +190,36 @@ export function ComparePanel({
             <th>A</th>
             <th>B</th>
             <th>C</th>
+            <th>Live ({activeSlot})</th>
           </tr>
         </thead>
         <tbody>
-          {ordered.map((row) => (
-            <tr
-              key={row.param}
-              className={
-                row.param === "volume"
-                  ? row.differs
-                    ? "is-diff is-volume"
-                    : "is-volume"
-                  : row.differs
-                    ? "is-diff"
-                    : undefined
-              }
-            >
-              <td>{row.param}</td>
-              <td>{row.a}</td>
-              <td>{row.b}</td>
-              <td>{row.c}</td>
-            </tr>
-          ))}
+          {ordered.map((row) => {
+            const liveValue = liveParams[row.param as keyof LiveParamsSnapshot];
+            const bankActive =
+              activeSlot === "A" ? row.a : activeSlot === "B" ? row.b : row.c;
+            const liveDiffers = liveValue !== bankActive;
+            return (
+              <tr
+                key={row.param}
+                className={
+                  row.param === "volume"
+                    ? row.differs
+                      ? "is-diff is-volume"
+                      : "is-volume"
+                    : row.differs
+                      ? "is-diff"
+                      : undefined
+                }
+              >
+                <td>{row.param}</td>
+                <td>{row.a}</td>
+                <td>{row.b}</td>
+                <td>{row.c}</td>
+                <td className={liveDiffers ? "is-live-diff" : undefined}>{liveValue}</td>
+              </tr>
+            );
+          })}
         </tbody>
       </table>
     </div>

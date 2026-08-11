@@ -3,6 +3,8 @@ import { defineConfig } from "vite";
 import electron from "vite-plugin-electron/simple";
 
 export default defineConfig({
+  // Required for Electron file:// loading after packaging.
+  base: "./",
   plugins: [
     react(),
     electron({
@@ -11,15 +13,9 @@ export default defineConfig({
         vite: {
           build: {
             rollupOptions: {
-              external: [
-                "@julusian/midi",
-                "@tonehub/midi-transport-node",
-                "@tonehub/cube-baby-api",
-                "@tonehub/cube-baby-protocol",
-                "@tonehub/midi-core",
-                "jszip",
-              ],
-
+              // Native MIDI binary must ship as a real node module.
+              // Bundle pure @tonehub/* TS packages into main.js for a self-contained asar.
+              external: ["electron", "@julusian/midi"],
             },
           },
         },

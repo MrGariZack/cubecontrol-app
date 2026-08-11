@@ -1,4 +1,5 @@
 import { app, BrowserWindow, dialog, ipcMain, session } from "electron";
+import { existsSync } from "node:fs";
 import { readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -11,7 +12,17 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const bridge = new DeviceBridge();
 let library: LibraryStore;
 
+function resolveAppIcon(): string | undefined {
+  const candidates = [
+    path.join(__dirname, "../build/icon.ico"),
+    path.join(process.resourcesPath, "build/icon.ico"),
+    path.join(process.resourcesPath, "icon.ico"),
+  ];
+  return candidates.find((candidate) => existsSync(candidate));
+}
+
 function createWindow(): BrowserWindow {
+  const icon = resolveAppIcon();
   const win = new BrowserWindow({
     width: 1360,
     height: 860,
@@ -19,6 +30,7 @@ function createWindow(): BrowserWindow {
     minHeight: 720,
     backgroundColor: "#121416",
     title: "CubeControl",
+    ...(icon ? { icon } : {}),
     webPreferences: {
       preload: path.join(__dirname, "preload.mjs"),
       contextIsolation: true,
@@ -76,22 +88,33 @@ app.whenReady().then(async () => {
       return bridge.saveSlot(slot, live);
     },
   );
-  ipcMain.handle("tonehub:loadIrFromWav", async (_event, wav: Uint8Array, cabinet: number) => {
-    const bytes = wav instanceof Uint8Array ? wav : Uint8Array.from(wav);
-    const romSlot = cabinet - 1;
-    try {
-      const sector = await bridge.dumpIrRomSlot(romSlot);
-      await library.saveIrBackup({
-        cabinet,
-        romSlot,
-        sector,
-        sourceName: "pre-load-ir",
+  ipcMain.handle(
+    "tonehub:loadIrFromWav",
+    async (
+      _event,
+      wav: Uint8Array,
+      cabinet: number,
+      options?: { confirmFactoryIrOverwrite?: boolean; distance?: number },
+    ) => {
+      const bytes = wav instanceof Uint8Array ? wav : Uint8Array.from(wav);
+      const romSlot = cabinet - 1;
+      try {
+        const sector = await bridge.dumpIrRomSlot(romSlot);
+        await library.saveIrBackup({
+          cabinet,
+          romSlot,
+          sector,
+          sourceName: "pre-load-ir",
+        });
+      } catch (error) {
+        console.warn("safe IR backup failed", error);
+      }
+      return bridge.loadIrFromWav(bytes, cabinet, {
+        confirmFactoryIrOverwrite: options?.confirmFactoryIrOverwrite === true,
+        ...(options?.distance === undefined ? {} : { distance: options.distance }),
       });
-    } catch (error) {
-      console.warn("safe IR backup failed", error);
-    }
-    return bridge.loadIrFromWav(bytes, cabinet);
-  });
+    },
+  );
 
   ipcMain.handle("tonehub:exportBank", async (event) => {
     const win = BrowserWindow.fromWebContents(event.sender);
@@ -112,6 +135,18 @@ app.whenReady().then(async () => {
     "tonehub:matchVolumes",
     async (_event, source: MatchVolumesSource, liveSlot: PresetSlotId, liveVolume?: number) => {
       return bridge.matchVolumes(source, liveSlot, liveVolume);
+    },
+  );
+
+  ipcMain.handle(
+    "tonehub:copySlot",
+    async (
+      _event,
+      from: PresetSlotId | "live",
+      to: PresetSlotId,
+      options?: { live?: LiveParamsSnapshot; liveSlot?: PresetSlotId },
+    ) => {
+      return bridge.copySlot(from, to, options);
     },
   );
 
@@ -173,7 +208,12 @@ app.whenReady().then(async () => {
   ipcMain.handle("library:readIrWav", async (_event, id: string) => library.readIrWav(id));
   ipcMain.handle(
     "library:loadIrToPedal",
-    async (_event, irId: string, cabinet: number) => {
+    async (
+      _event,
+      irId: string,
+      cabinet: number,
+      options?: { confirmFactoryIrOverwrite?: boolean; distance?: number },
+    ) => {
       const wav = await library.readIrWav(irId);
       const romSlot = cabinet - 1;
       try {
@@ -187,7 +227,10 @@ app.whenReady().then(async () => {
       } catch (error) {
         console.warn("safe IR backup failed", error);
       }
-      return bridge.loadIrFromWav(wav, cabinet);
+      return bridge.loadIrFromWav(wav, cabinet, {
+        confirmFactoryIrOverwrite: options?.confirmFactoryIrOverwrite === true,
+        ...(options?.distance === undefined ? {} : { distance: options.distance }),
+      });
     },
   );
   ipcMain.handle("library:restoreIrBackup", async (_event, backupId: string) => {
@@ -199,6 +242,17 @@ app.whenReady().then(async () => {
     await bridge.selectCabinet(item.cabinet);
     return { verified, cabinet: item.cabinet, romSlot: item.romSlot };
   });
+  ipcMain.handle("library:saveSong", async (_event, input) => library.saveSong(input));
+  ipcMain.handle("library:deleteSong", async (_event, id: string) => {
+    await library.deleteSong(id);
+  });
+  ipcMain.handle("library:saveShow", async (_event, input) => library.saveShow(input));
+  ipcMain.handle("library:deleteShow", async (_event, id: string) => {
+    await library.deleteShow(id);
+  });
+  ipcMain.handle("library:exportShowAsPack", async (_event, showId: string) =>
+    library.exportShowAsPack(showId),
+  );
   ipcMain.handle(
     "library:createPack",
     async (

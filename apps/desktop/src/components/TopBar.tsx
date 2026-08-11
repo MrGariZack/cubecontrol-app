@@ -3,6 +3,7 @@ import { SlotSwitcher } from "./SlotSwitcher";
 
 /** Pedal Cabinet 1..8 → ROM IR slots 0..7 (Cab 8 = upload). */
 const IR_CABINETS = [1, 2, 3, 4, 5, 6, 7, 8] as const;
+const ALL_SLOTS: readonly PresetSlotId[] = ["A", "B", "C"];
 
 type TopBarProps = {
   readonly deviceName: string;
@@ -15,6 +16,7 @@ type TopBarProps = {
   readonly onSelectSlot: (slot: PresetSlotId) => void;
   readonly onIrCabinetChange: (cabinet: number) => void;
   readonly onSave: () => void;
+  readonly onCopyTo: (to: PresetSlotId) => void;
   readonly onExportBank: () => void;
   readonly onImportBank: () => void;
   readonly onLoadIr: () => void;
@@ -36,6 +38,7 @@ export function TopBar({
   onSelectSlot,
   onIrCabinetChange,
   onSave,
+  onCopyTo,
   onExportBank,
   onImportBank,
   onLoadIr,
@@ -46,6 +49,7 @@ export function TopBar({
   onDisconnect,
 }: TopBarProps) {
   const busy = slotBusy || actionBusy;
+  const copyTargets = ALL_SLOTS.filter((slot) => slot !== activeSlot);
   return (
     <header className="top-bar">
       <div className="top-bar__brand">
@@ -81,6 +85,18 @@ export function TopBar({
         <button type="button" className="top-bar__action" disabled={busy} onClick={onSave}>
           Guardar {activeSlot}
         </button>
+        {copyTargets.map((slot) => (
+          <button
+            key={slot}
+            type="button"
+            className="top-bar__action"
+            disabled={busy}
+            onClick={() => onCopyTo(slot)}
+            title={`Copia el tono live al slot ${slot}`}
+          >
+            Copiar a {slot}
+          </button>
+        ))}
         <button type="button" className="top-bar__action" disabled={busy} onClick={onExportBank}>
           Exportar
         </button>

@@ -62,6 +62,10 @@ export function ConnectScreen({ onConnected }: ConnectScreenProps) {
           Conecta por USB para editar Drive, Delay, Reverb, Mod, Cabinet y Output en tiempo real.
         </p>
         <p className="connect__hint">{portsHint}</p>
+        <p className="connect__safety">
+          Software no oficial · sin garantía · IR preferible en Cab 8 · exporta bank antes de
+          experimentos. Ya aceptaste el aviso de riesgos en este equipo.
+        </p>
       </div>
       <div className="connect__actions">
         <button
