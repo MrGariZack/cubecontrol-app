@@ -308,6 +308,28 @@ export const en: Messages = {
   "pedal.sectionOffShort": "section off",
   "audio.micDenied": "No microphone access in this environment",
 
+  "report.eyebrow": "Support",
+  "report.title": "Report a problem",
+  "report.lead":
+    "Export a diagnostics ZIP with recent action logs and open a GitHub issue. Great for sharing with maintainers or Discord.",
+  "report.notesLabel": "What went wrong?",
+  "report.notesPh":
+    "e.g. Save slot B said verified but reboot lost the tone. Pedal was on Cab 8…",
+  "report.step1": "Write a short description (optional but helpful).",
+  "report.step2": "Export the diagnostics ZIP and attach it to the issue.",
+  "report.step3": "Open GitHub (or copy a summary for chat).",
+  "report.exportZip": "Export diagnostics ZIP",
+  "report.reveal": "Show in folder",
+  "report.copy": "Copy summary",
+  "report.github": "Open GitHub issue",
+  "report.cancelled": "Export cancelled",
+  "report.exported": "Saved · {path}",
+  "report.copied": "Summary copied to clipboard",
+  "report.githubOpened": "GitHub Issues opened in your browser",
+  "report.privacy":
+    "ZIP includes app/OS versions and recent MIDI/UI logs. No IR WAV or bank files.",
+  "report.open": "Report a problem",
+
   "scope.lap": "LAP {n}!",
   "scope.blocked": "blocked — that bar!",
   "scope.title": "Signal scope",

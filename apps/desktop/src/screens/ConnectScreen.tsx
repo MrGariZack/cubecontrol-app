@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useI18n } from "../i18n";
 import type { DesktopConnectionInfo } from "../types/device";
 import { LanguageSwitcher } from "../components/LanguageSwitcher";
+import { useReportProblem } from "../report/ReportProblemContext";
 
 type ConnectScreenProps = {
   readonly onConnected: (info: DesktopConnectionInfo) => void;
@@ -9,6 +10,7 @@ type ConnectScreenProps = {
 
 export function ConnectScreen({ onConnected }: ConnectScreenProps) {
   const { t, locale } = useI18n();
+  const { openReportProblem } = useReportProblem();
   const [phase, setPhase] = useState<"idle" | "connecting" | "error">("idle");
   const [error, setError] = useState<string | null>(null);
   const [portsHint, setPortsHint] = useState("");
@@ -76,6 +78,14 @@ export function ConnectScreen({ onConnected }: ConnectScreenProps) {
           disabled={phase === "connecting"}
         >
           {phase === "connecting" ? t("connect.connecting") : t("connect.cta")}
+        </button>
+        <button
+          type="button"
+          className="connect__report"
+          onClick={openReportProblem}
+          disabled={phase === "connecting"}
+        >
+          {t("report.open")}
         </button>
         {phase === "error" && error ? <p className="connect__error">{error}</p> : null}
       </div>

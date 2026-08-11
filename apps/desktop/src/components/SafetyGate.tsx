@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useI18n } from "../i18n";
 import { writeSafetyAcceptance } from "../safety/disclaimer";
+import { useReportProblem } from "../report/ReportProblemContext";
 import { LanguageSwitcher } from "./LanguageSwitcher";
 import "./safety-gate.css";
 
@@ -12,6 +13,7 @@ const TIER_IDS = ["live", "bank", "ir"] as const;
 
 export function SafetyGate({ onAccepted }: SafetyGateProps) {
   const { t } = useI18n();
+  const { openReportProblem } = useReportProblem();
   const [readRisks, setReadRisks] = useState(false);
   const [ownRisk, setOwnRisk] = useState(false);
   const [noOfficial, setNoOfficial] = useState(false);
@@ -84,6 +86,9 @@ export function SafetyGate({ onAccepted }: SafetyGateProps) {
           onClick={accept}
         >
           {t("safety.cta")}
+        </button>
+        <button type="button" className="safety-gate__report" onClick={openReportProblem}>
+          {t("report.open")}
         </button>
         <p className="safety-gate__foot">{t("safety.foot")}</p>
       </div>

@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import type { PresetSlotId } from "@tonehub/cube-baby-protocol";
 import { useI18n } from "../i18n";
+import { useReportProblem } from "../report/ReportProblemContext";
 import { LanguageSwitcher } from "./LanguageSwitcher";
 import { SlotSwitcher } from "./SlotSwitcher";
 
@@ -28,6 +29,7 @@ export function StudioSidebar({
   children,
 }: StudioSidebarProps) {
   const { t } = useI18n();
+  const { openReportProblem } = useReportProblem();
   const hideChrome = nav === "stage";
   if (hideChrome) return null;
 
@@ -74,6 +76,14 @@ export function StudioSidebar({
 
       <div className="studio-sidebar__footer">
         <LanguageSwitcher compact />
+        <button
+          type="button"
+          className="studio-sidebar__report"
+          disabled={busy}
+          onClick={openReportProblem}
+        >
+          {t("report.open")}
+        </button>
         <button
           type="button"
           className="studio-sidebar__disconnect"

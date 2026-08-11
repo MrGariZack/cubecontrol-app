@@ -142,6 +142,16 @@ export type ToneHubDesktopApi = {
     options?: { live?: LiveParamsSnapshot; liveSlot?: PresetSlotId },
   ) => Promise<CopySlotResult>;
   library: ToneHubLibraryApi;
+  diagnostics: {
+    exportBundle: (input: {
+      notes: string;
+      locale: string;
+      uiMidiLogJsonl: string;
+      metaExtra?: Record<string, unknown>;
+    }) => Promise<{ path: string } | null>;
+    openExternal: (url: string) => Promise<void>;
+    revealInFolder: (filePath: string) => Promise<void>;
+  };
 };
 
 const library: ToneHubLibraryApi = {
@@ -188,6 +198,11 @@ const api: ToneHubDesktopApi = {
     ipcRenderer.invoke("tonehub:matchVolumes", source, liveSlot, liveVolume),
   copySlot: (from, to, options) => ipcRenderer.invoke("tonehub:copySlot", from, to, options),
   library,
+  diagnostics: {
+    exportBundle: (input) => ipcRenderer.invoke("diagnostics:exportBundle", input),
+    openExternal: (url) => ipcRenderer.invoke("diagnostics:openExternal", url),
+    revealInFolder: (filePath) => ipcRenderer.invoke("diagnostics:revealInFolder", filePath),
+  },
 };
 
 contextBridge.exposeInMainWorld("tonehubDesktop", api);

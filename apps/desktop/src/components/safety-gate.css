@@ -147,6 +147,23 @@
   opacity: 0.4;
 }
 
+.safety-gate__report {
+  margin-top: 10px;
+  width: 100%;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--ink-soft);
+  padding: 12px 16px;
+  font-weight: 700;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.safety-gate__report:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
 .safety-gate__foot {
   margin: 12px 0 0;
   font-size: 11px;

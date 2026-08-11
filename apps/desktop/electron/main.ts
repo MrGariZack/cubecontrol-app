@@ -5,6 +5,12 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import type { LiveParamName, PresetSlotId } from "@tonehub/cube-baby-protocol";
 import { DeviceBridge, type LiveParamsSnapshot, type MatchVolumesSource } from "./deviceBridge.js";
+import {
+  exportDiagnosticsBundle,
+  openExternalUrl,
+  revealInFolder,
+  type DiagnosticsExportInput,
+} from "./diagnostics.js";
 import { LibraryStore } from "./library/libraryStore.js";
 import type { LibraryProfile } from "./library/types.js";
 
@@ -347,6 +353,16 @@ app.whenReady().then(async () => {
   ipcMain.handle("library:compareSlots", async () => {
     const bank = await bridge.getBank();
     return library.compareSlots(bank);
+  });
+
+  ipcMain.handle("diagnostics:exportBundle", async (event, input: DiagnosticsExportInput) =>
+    exportDiagnosticsBundle(event, input),
+  );
+  ipcMain.handle("diagnostics:openExternal", async (_event, url: string) => {
+    await openExternalUrl(url);
+  });
+  ipcMain.handle("diagnostics:revealInFolder", async (_event, filePath: string) => {
+    revealInFolder(filePath);
   });
 
   createWindow();

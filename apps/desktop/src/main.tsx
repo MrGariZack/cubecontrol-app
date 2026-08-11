@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 import { App } from "./App";
 import { I18nProvider } from "./i18n";
 import { readStoredLocale } from "./i18n/types";
+import { ReportProblemProvider } from "./report/ReportProblemContext";
 import "./styles.css";
 
 const root = document.getElementById("root");
@@ -15,7 +16,9 @@ document.documentElement.lang = readStoredLocale();
 createRoot(root).render(
   <StrictMode>
     <I18nProvider>
-      <App />
+      <ReportProblemProvider>
+        <App />
+      </ReportProblemProvider>
     </I18nProvider>
   </StrictMode>,
 );
