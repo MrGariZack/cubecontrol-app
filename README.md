@@ -9,7 +9,7 @@ Hardware protocol lives in the sibling core: [cubecontrol](https://github.com/Mr
 | **App repo** | https://github.com/MrGariZack/cubecontrol-app |
 | **Core repo** | https://github.com/MrGariZack/cubecontrol |
 | **Downloads** | [Releases](https://github.com/MrGariZack/cubecontrol-app/releases) (Windows NSIS + portable) |
-| **Version** | `0.1.0` — see [`CHANGELOG.md`](CHANGELOG.md) |
+| **Version** | `0.1.1` — see [`CHANGELOG.md`](CHANGELOG.md) |
 | **Publish guide** | [`docs/PUBLISH.md`](docs/PUBLISH.md) |
 
 **Safety:** experimental USB writer — [`apps/desktop/SAFETY.md`](apps/desktop/SAFETY.md). Not affiliated with M-VAVE. Prefer IR uploads to **Cabinet 8**; export bank before risky ops.

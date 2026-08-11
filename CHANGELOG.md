@@ -11,6 +11,15 @@ Format: based on [Keep a Changelog](https://keepachangelog.com/). Versioning: [S
 - Pack → Show import round-trip
 - Signed Windows builds (Authenticode)
 
+## [0.1.1] — 2026-08-11
+
+### Added
+- In-app **Report a problem** (diagnostics ZIP + GitHub issue flow)
+- Public landing site (`site/`) on GitHub Pages
+
+### Fixed
+- Pages deploy enablement on first GitHub Actions run
+
 ## [0.1.0] — 2026-08-11
 
 ### Added
@@ -25,4 +34,5 @@ Format: based on [Keep a Changelog](https://keepachangelog.com/). Versioning: [S
 - Unofficial / experimental USB writer — see `apps/desktop/SAFETY.md`
 - Builds are **unsigned** (SmartScreen expected)
 
+[0.1.1]: https://github.com/MrGariZack/cubecontrol-app/releases/tag/v0.1.1
 [0.1.0]: https://github.com/MrGariZack/cubecontrol-app/releases/tag/v0.1.0

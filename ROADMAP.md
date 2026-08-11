@@ -11,7 +11,7 @@ Detalle de negocio: [`docs/open-core.md`](docs/open-core.md). Seguridad: [`apps/
 - [x] IR backup local + gates Cab 1–7  
 - [x] README / LICENSE / CONTRIBUTING / open-core listos para repo público  
 - [x] i18n ES/EN + publish docs / CI release Windows  
-- [ ] Smoke público + instaladores en GitHub Releases (`v0.1.0`)  
+- [x] Smoke público + instaladores en GitHub Releases (`v0.1.0` / `v0.1.1`)  
 - [ ] Pulir UX Shows (comodidad) con feedback real de 2–3 músicos  
 
 ## Siguiente (v0.2 · open polish)
