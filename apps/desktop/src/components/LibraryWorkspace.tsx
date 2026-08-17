@@ -11,6 +11,7 @@ import type {
 import { FAVORITE_TAG } from "../../electron/library/types";
 import type { LiveParamsSnapshot } from "../types/device";
 import { MicDistanceRail } from "./cube-baby/MicDistanceRail";
+import { DEFAULT_DELAY_NOTE, DELAY_NOTE_IDS, clampBpm, isDelayNoteId, type DelayNoteId } from "../music/delaySync";
 import { useConfirmDialog } from "../hooks/useConfirmDialog";
 import { useI18n } from "../i18n";
 import "./library-workspace.css";
@@ -123,6 +124,8 @@ export function LibraryWorkspace(props: LibraryWorkspaceProps) {
     presetId: string;
     irId: string;
     notes: string;
+    bpm: number | "";
+    delayNote: DelayNoteId;
     id?: string;
   } | null>(null);
   const [armSlots, setArmSlots] = useState<{
@@ -133,6 +136,8 @@ export function LibraryWorkspace(props: LibraryWorkspaceProps) {
   const [armOpen, setArmOpen] = useState(false);
   const [dragSongId, setDragSongId] = useState<string | null>(null);
   const [moreTab, setMoreTab] = useState<"irs" | "backups" | "export">("irs");
+  const [grooveBpm, setGrooveBpm] = useState<number | "">("");
+  const [grooveNote, setGrooveNote] = useState<DelayNoteId>(DEFAULT_DELAY_NOTE);
 
   const refresh = useCallback(async () => {
     const next = await window.tonehubDesktop.library.list();
@@ -176,6 +181,12 @@ export function LibraryWorkspace(props: LibraryWorkspaceProps) {
   const selectedShow = index.shows.find((s) => s.id === selectedShowId) ?? null;
   const selectedPreset = index.presets.find((p) => p.id === selectedPresetId) ?? null;
   const selectedSong = index.songs.find((s) => s.id === selectedSongId) ?? null;
+
+  useEffect(() => {
+    if (selectedSong === null) return;
+    setGrooveBpm(selectedSong.bpm ?? "");
+    setGrooveNote(isDelayNoteId(selectedSong.delayNote) ? selectedSong.delayNote : DEFAULT_DELAY_NOTE);
+  }, [selectedSong]);
 
   async function runBusy(fn: () => Promise<void>) {
     onBusy(true);
@@ -249,12 +260,34 @@ export function LibraryWorkspace(props: LibraryWorkspaceProps) {
         notes: songDraft.notes,
         presetId: songDraft.presetId,
         ...(songDraft.irId ? { irId: songDraft.irId, irCabinet, irDistance } : {}),
+        ...(songDraft.bpm === "" ? {} : { bpm: clampBpm(songDraft.bpm) }),
+        delayNote: songDraft.delayNote,
         ...(songDraft.id ? { id: songDraft.id } : {}),
       });
       setSongDraft(null);
       setSelectedSongId(item.id);
       setSection("songs");
       onStatus(t("lib.songReady", { name: item.name }));
+    });
+  }
+
+  async function saveSelectedSongGroove() {
+    if (selectedSong === null) return;
+    await runBusy(async () => {
+      await window.tonehubDesktop.library.saveSong({
+        id: selectedSong.id,
+        name: selectedSong.name,
+        notes: selectedSong.notes,
+        tags: [...selectedSong.tags],
+        presetId: selectedSong.presetId,
+        ...(selectedSong.irId ? { irId: selectedSong.irId } : {}),
+        ...(selectedSong.irCabinet === undefined ? {} : { irCabinet: selectedSong.irCabinet }),
+        ...(selectedSong.irDistance === undefined ? {} : { irDistance: selectedSong.irDistance }),
+        ...(grooveBpm === "" ? {} : { bpm: clampBpm(grooveBpm) }),
+        delayNote: grooveNote,
+        ...(selectedSong.key ? { key: selectedSong.key } : {}),
+      });
+      onStatus(t("groove.saved", { name: selectedSong.name }));
     });
   }
 
@@ -607,6 +640,7 @@ export function LibraryWorkspace(props: LibraryWorkspaceProps) {
                         <span className="lib-ws__row-title">{s.name}</span>
                         <span className="lib-ws__row-meta">
                           {tone?.name ?? t("lib.missingTone")}
+                          {s.bpm !== undefined ? ` · ${s.bpm} BPM` : ""}
                         </span>
                       </button>
                     </li>
@@ -628,6 +662,8 @@ export function LibraryWorkspace(props: LibraryWorkspaceProps) {
                       presetId: index.presets[0]?.id ?? "",
                       irId: "",
                       notes: "",
+                      bpm: "",
+                      delayNote: DEFAULT_DELAY_NOTE,
                     })
                   }
                 >
@@ -650,6 +686,59 @@ export function LibraryWorkspace(props: LibraryWorkspaceProps) {
                           onChange={(e) => setSongDraft({ ...songDraft, name: e.target.value })}
                         />
                       </label>
+                      <div className="lib-ws__tempo-row" aria-label={t("groove.aria")}>
+                        <label className="lib-ws__field lib-ws__field--inline">
+                          {t("groove.bpm")}
+                          <input
+                            type="number"
+                            min={40}
+                            max={240}
+                            inputMode="numeric"
+                            disabled={busy}
+                            value={songDraft.bpm}
+                            placeholder="120"
+                            onChange={(e) => {
+                              const raw = e.target.value;
+                              if (raw === "") {
+                                setSongDraft({ ...songDraft, bpm: "" });
+                                return;
+                              }
+                              const n = Number(raw);
+                              setSongDraft({
+                                ...songDraft,
+                                bpm: Number.isFinite(n) ? n : "",
+                              });
+                            }}
+                          />
+                        </label>
+                        <label className="lib-ws__field lib-ws__field--inline">
+                          {t("groove.note")}
+                          <select
+                            disabled={busy}
+                            value={songDraft.delayNote}
+                            onChange={(e) =>
+                              setSongDraft({
+                                ...songDraft,
+                                delayNote: (e.target.value as DelayNoteId) || DEFAULT_DELAY_NOTE,
+                              })
+                            }
+                          >
+                            {DELAY_NOTE_IDS.map((id) => (
+                              <option key={id} value={id}>
+                                {t(
+                                  id === "1/4"
+                                    ? "groove.note.quarter"
+                                    : id === "1/8"
+                                      ? "groove.note.eighth"
+                                      : id === "1/8d"
+                                        ? "groove.note.dottedEighth"
+                                        : "groove.note.sixteenth",
+                                )}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+                      </div>
                       <ul className="lib-ws__pick">
                         {index.presets.map((p) => (
                           <li key={p.id}>
@@ -754,8 +843,67 @@ export function LibraryWorkspace(props: LibraryWorkspaceProps) {
                     {selectedSong.irId
                       ? ` · IR: ${index.irs.find((i) => i.id === selectedSong.irId)?.name ?? "—"}`
                       : ""}
+                    {selectedSong.bpm !== undefined
+                      ? ` · ${selectedSong.bpm} BPM · ${selectedSong.delayNote ?? DEFAULT_DELAY_NOTE}`
+                      : ""}
+                    {selectedSong.key ? ` · ${selectedSong.key}` : ""}
                   </p>
+                  <div className="lib-ws__tempo-row" aria-label={t("groove.aria")}>
+                    <label className="lib-ws__field lib-ws__field--inline">
+                      {t("groove.bpm")}
+                      <input
+                        type="number"
+                        min={40}
+                        max={240}
+                        inputMode="numeric"
+                        disabled={busy}
+                        value={grooveBpm}
+                        placeholder="120"
+                        onChange={(e) => {
+                          const raw = e.target.value;
+                          if (raw === "") {
+                            setGrooveBpm("");
+                            return;
+                          }
+                          const n = Number(raw);
+                          setGrooveBpm(Number.isFinite(n) ? n : "");
+                        }}
+                      />
+                    </label>
+                    <label className="lib-ws__field lib-ws__field--inline">
+                      {t("groove.note")}
+                      <select
+                        disabled={busy}
+                        value={grooveNote}
+                        onChange={(e) =>
+                          setGrooveNote((e.target.value as DelayNoteId) || DEFAULT_DELAY_NOTE)
+                        }
+                      >
+                        {DELAY_NOTE_IDS.map((id) => (
+                          <option key={id} value={id}>
+                            {t(
+                              id === "1/4"
+                                ? "groove.note.quarter"
+                                : id === "1/8"
+                                  ? "groove.note.eighth"
+                                  : id === "1/8d"
+                                    ? "groove.note.dottedEighth"
+                                    : "groove.note.sixteenth",
+                            )}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  </div>
                   <div className="lib-ws__detail-actions">
+                    <button
+                      type="button"
+                      className="lib-ws__ghost"
+                      disabled={busy}
+                      onClick={() => void saveSelectedSongGroove()}
+                    >
+                      {t("groove.save")}
+                    </button>
                     <button
                       type="button"
                       className="lib-ws__primary lib-ws__primary--lg"

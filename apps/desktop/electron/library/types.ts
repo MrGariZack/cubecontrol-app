@@ -78,6 +78,8 @@ export type SongLibraryItem = {
   readonly irDistance?: number;
   readonly key?: string;
   readonly bpm?: number;
+  /** Delay subdivision synced to `bpm` (eighth = corchea). */
+  readonly delayNote?: "1/4" | "1/8" | "1/8d" | "1/16";
   readonly createdAt: string;
   readonly updatedAt: string;
 };

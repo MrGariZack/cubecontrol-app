@@ -485,6 +485,19 @@
   }
 }
 
+.lib-ws__field--inline {
+  flex: 1;
+  min-width: 120px;
+  margin-bottom: 0;
+}
+
+.lib-ws__tempo-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 0 0 16px;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .lib-ws__row,
   .lib-ws__cue-row,

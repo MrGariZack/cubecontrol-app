@@ -75,6 +75,7 @@ export type ToneHubLibraryApi = {
     irDistance?: number;
     key?: string;
     bpm?: number;
+    delayNote?: "1/4" | "1/8" | "1/8d" | "1/16";
     id?: string;
   }) => Promise<SongLibraryItem>;
   deleteSong: (id: string) => Promise<void>;

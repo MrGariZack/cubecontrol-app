@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { LIVE_PARAM_MODULATION_OFF, LIVE_PARAM_NAMES, type LiveParamName, type PresetSlotId } from "@tonehub/cube-baby-protocol";
 import { ComparePanel } from "../components/ComparePanel";
 import { CubeBabyPedal } from "../components/cube-baby/CubeBabyPedal";
+import { DelayTapBar } from "../components/DelayTapBar";
 import { DeviceWorkspace } from "../components/DeviceWorkspace";
 import { LibraryWorkspace } from "../components/LibraryWorkspace";
 import { StageMode } from "../components/StageMode";
@@ -9,6 +10,12 @@ import { StudioSidebar, type StudioNavId } from "../components/StudioSidebar";
 import { StudioToolbar } from "../components/StudioToolbar";
 import { TunerPanel } from "../components/TunerPanel";
 import { midiLog, midiWarn } from "../debug/midiLog";
+import {
+  DEFAULT_DELAY_NOTE,
+  applyGrooveTime,
+  isDelayNoteId,
+  type DelayNoteId,
+} from "../music/delaySync";
 import { useConfirmDialog } from "../hooks/useConfirmDialog";
 import { useDebouncedLiveWrite } from "../hooks/useDebouncedLiveWrite";
 import { useI18n } from "../i18n";
@@ -69,12 +76,16 @@ export function StudioScreen({ connection, onDisconnect }: StudioScreenProps) {
   const [liveDirty, setLiveDirty] = useState(false);
   const [undoCount, setUndoCount] = useState(0);
   const [redoCount, setRedoCount] = useState(0);
+  const [sessionBpm, setSessionBpm] = useState<number | "">("");
+  const [sessionNote, setSessionNote] = useState<DelayNoteId>(DEFAULT_DELAY_NOTE);
+  const [tempoSynced, setTempoSynced] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const paramsRef = useRef(params);
   const slotRef = useRef(activeSlot);
   const bankRef = useRef(bank);
   const slotApplyGen = useRef(0);
   const checkpointArmed = useRef(true);
+  const writingTempoRef = useRef(false);
   const { scheduleWrite, flush, cancelPending } = useDebouncedLiveWrite();
   const { confirm, dialog: confirmDialog } = useConfirmDialog();
 
@@ -108,6 +119,9 @@ export function StudioScreen({ connection, onDisconnect }: StudioScreenProps) {
   const onParamChange = useCallback(
     (param: LiveParamName, value: number) => {
       midiLog("ui-knob", { slot: slotRef.current, param, value });
+      if (param === "time" && !writingTempoRef.current) {
+        setTempoSynced(false);
+      }
       if (checkpointArmed.current) {
         checkpointArmed.current = false;
         void pushCheckpoint(`live:${param}`);
@@ -182,6 +196,16 @@ export function StudioScreen({ connection, onDisconnect }: StudioScreenProps) {
       // Mix at 0 only kills delay wet (Mix/FB/Time). MOD is independent (center 7–8 = off).
     },
     [scheduleWrite, pushCheckpoint],
+  );
+
+  const onApplyTempoTime = useCallback(
+    (time: number) => {
+      writingTempoRef.current = true;
+      setTempoSynced(true);
+      onParamChange("time", time);
+      writingTempoRef.current = false;
+    },
+    [onParamChange],
   );
 
   useEffect(() => {
@@ -709,7 +733,11 @@ export function StudioScreen({ connection, onDisconnect }: StudioScreenProps) {
     const index = await window.tonehubDesktop.library.list();
     const preset = index.presets.find((p) => p.id === song.presetId);
     if (preset === undefined) throw new Error(t("studio.toneMissing", { name: song.name }));
-    return preset.params;
+    return applyGrooveTime(
+      preset.params,
+      song.bpm,
+      isDelayNoteId(song.delayNote) ? song.delayNote : undefined,
+    );
   }
 
   async function onApplySong(song: SongLibraryItem) {
@@ -721,6 +749,11 @@ export function StudioScreen({ connection, onDisconnect }: StudioScreenProps) {
       const next = await resolveSongPreset(song);
       await window.tonehubDesktop.applyLiveParams(next);
       setParams(next);
+      if (song.bpm !== undefined && Number.isFinite(song.bpm)) {
+        setSessionBpm(song.bpm);
+        setSessionNote(isDelayNoteId(song.delayNote) ? song.delayNote : DEFAULT_DELAY_NOTE);
+        setTempoSynced(true);
+      }
       if (song.irId) {
         const cabinet = song.irCabinet ?? irCabinet;
         if (cabinet !== 8) {
@@ -943,13 +976,25 @@ export function StudioScreen({ connection, onDisconnect }: StudioScreenProps) {
                 onExit={() => setNav("library")}
               />
             ) : (
-              <CubeBabyPedal
-                params={params}
-                activeSlot={activeSlot}
-                busy={busy}
-                onParamChange={onParamChange}
-                onSelectSlot={(slot) => void onSelectSlot(slot)}
-              />
+              <>
+                <CubeBabyPedal
+                  params={params}
+                  activeSlot={activeSlot}
+                  busy={busy}
+                  onParamChange={onParamChange}
+                  onSelectSlot={(slot) => void onSelectSlot(slot)}
+                />
+                <DelayTapBar
+                  bpm={sessionBpm}
+                  note={sessionNote}
+                  synced={tempoSynced}
+                  liveTime={params.time}
+                  disabled={busy}
+                  onBpmChange={setSessionBpm}
+                  onNoteChange={setSessionNote}
+                  onApplyTime={onApplyTempoTime}
+                />
+              </>
             )}
           </main>
         </div>

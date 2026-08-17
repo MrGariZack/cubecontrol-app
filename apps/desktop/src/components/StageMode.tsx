@@ -96,6 +96,13 @@ export function StageMode({
           <>
             <p className="stage__now-label">{t("stage.now")}</p>
             <h1 className="stage__now">{current.name}</h1>
+            {current.bpm !== undefined ? (
+              <p className="stage__next">
+                {current.bpm} BPM
+                {current.delayNote ? ` · ${current.delayNote}` : ""}
+                {current.key ? ` · ${current.key}` : ""}
+              </p>
+            ) : null}
             {next ? (
               <p className="stage__next">
                 {t("stage.next")} <span>{next.name}</span>

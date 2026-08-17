@@ -210,6 +210,7 @@ export class LibraryStore {
     readonly irDistance?: number;
     readonly key?: string;
     readonly bpm?: number;
+    readonly delayNote?: "1/4" | "1/8" | "1/8d" | "1/16";
     readonly id?: string;
   }): Promise<SongLibraryItem> {
     await this.ensure();
@@ -235,6 +236,7 @@ export class LibraryStore {
       ...(input.irDistance === undefined ? {} : { irDistance: input.irDistance }),
       ...(input.key === undefined || input.key.trim() === "" ? {} : { key: input.key.trim() }),
       ...(input.bpm === undefined || !Number.isFinite(input.bpm) ? {} : { bpm: input.bpm }),
+      ...(input.delayNote === undefined ? {} : { delayNote: input.delayNote }),
       createdAt: existing?.createdAt ?? stamp,
       updatedAt: stamp,
     };
