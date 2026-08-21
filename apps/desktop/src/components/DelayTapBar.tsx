@@ -9,6 +9,7 @@ import {
   timeByteToMs,
   type DelayNoteId,
 } from "../music/delaySync";
+import { useMetronome } from "../music/useMetronome";
 import { useI18n } from "../i18n";
 import "./delay-tap-bar.css";
 
@@ -43,8 +44,9 @@ export function DelayTapBar({
   const { t } = useI18n();
   const tapsRef = useRef<number[]>([]);
   const [tapCount, setTapCount] = useState(0);
+  const numeric = typeof bpm === "number" && bpm >= 40 && bpm <= 240 ? clampBpm(bpm) : null;
+  const click = useMetronome(numeric);
 
-  const numeric = typeof bpm === "number" ? bpm : null;
   const previewTime = numeric === null ? null : grooveTimeByte(numeric, note);
   const previewMs = numeric === null ? null : delayMsForNote(numeric, note);
   const displayTime = synced && previewTime !== null ? previewTime : liveTime;
@@ -105,6 +107,15 @@ export function DelayTapBar({
         >
           {t("groove.tap")}
         </button>
+        <button
+          type="button"
+          className={click.playing ? "delay-tap__click is-on" : "delay-tap__click"}
+          disabled={disabled || !click.canPlay}
+          aria-pressed={click.playing}
+          onClick={click.toggle}
+        >
+          {click.playing ? t("groove.clickStop") : t("groove.click")}
+        </button>
         <div className="delay-tap__notes" role="group" aria-label={t("groove.note")}>
           {DELAY_NOTE_IDS.map((id) => (
             <button
@@ -135,6 +146,7 @@ export function DelayTapBar({
           : t("groove.readoutFree", { time: liveTime, actual: displayMs })}
         {tapCount > 0 ? ` · ${t("groove.taps", { n: tapCount })}` : ""}
         {!synced ? ` · ${t("groove.free")}` : ""}
+        {click.playing ? ` · ${t("groove.clicking")}` : ""}
       </p>
     </section>
   );

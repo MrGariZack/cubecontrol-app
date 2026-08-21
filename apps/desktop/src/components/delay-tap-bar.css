@@ -54,6 +54,30 @@
   cursor: not-allowed;
 }
 
+.delay-tap__click {
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--ink-soft);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.delay-tap__click.is-on {
+  border-color: var(--accent);
+  background: rgba(46, 196, 182, 0.18);
+  color: var(--ink);
+}
+
+.delay-tap__click:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
 .delay-tap__notes {
   display: flex;
   flex-wrap: wrap;
