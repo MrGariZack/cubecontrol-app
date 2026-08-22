@@ -11,6 +11,14 @@ Format: based on [Keep a Changelog](https://keepachangelog.com/). Versioning: [S
 - Pack → Show import round-trip
 - Signed Windows builds (Authenticode)
 
+## [0.1.2] — 2026-08-21
+
+### Added
+- Share tones, songs, and shows as `.cubecontrol.json` between desktop and Android
+- Import desktop ZIP packs (`tonehub-pack-v1`) on the phone
+- Android companion: live A/B/C, tuner, library, stage, USB-OTG MIDI
+- Fluid live knobs on Android (optimistic MIDI writes, drag/hold steppers)
+
 ## [0.1.1] — 2026-08-11
 
 ### Added
@@ -34,5 +42,6 @@ Format: based on [Keep a Changelog](https://keepachangelog.com/). Versioning: [S
 - Unofficial / experimental USB writer — see `apps/desktop/SAFETY.md`
 - Builds are **unsigned** (SmartScreen expected)
 
+[0.1.2]: https://github.com/MrGariZack/cubecontrol-app/releases/tag/v0.1.2
 [0.1.1]: https://github.com/MrGariZack/cubecontrol-app/releases/tag/v0.1.1
 [0.1.0]: https://github.com/MrGariZack/cubecontrol-app/releases/tag/v0.1.0

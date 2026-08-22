@@ -23,7 +23,7 @@ const copy = {
     "oss.copy":
       "App and hardware protocol are MIT. Report bugs from the app or open an issue — we want real USB capture notes.",
     "foot.mark": "CubeControl · unofficial CUBE Baby editor",
-    "foot.meta": "v0.1.1 · Windows NSIS + portable",
+    "foot.meta": "v0.1.2 · Windows NSIS + portable",
   },
   es: {
     brand: "CubeControl",
@@ -49,7 +49,7 @@ const copy = {
     "oss.copy":
       "App y protocolo de hardware son MIT. Reporta bugs desde la app o abre un issue — queremos notas reales de capturas USB.",
     "foot.mark": "CubeControl · editor no oficial del CUBE Baby",
-    "foot.meta": "v0.1.1 · Windows NSIS + portable",
+    "foot.meta": "v0.1.2 · Windows NSIS + portable",
   },
 };
 
