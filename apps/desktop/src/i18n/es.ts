@@ -255,6 +255,16 @@ export const es: Messages = {
   "lib.packsHint":
     "Preferimos exportar desde un Show. Aquí puedes importar un ZIP antiguo.",
   "lib.importPack": "Importar pack ZIP",
+  "share.action": "Compartir",
+  "share.exported": "Archivo listo · {path}",
+  "share.importFile": "Abrir archivo CubeControl",
+  "share.askTitle": "¿Cargar en la biblioteca?",
+  "share.askBody": "«{name}» · {presets} tono(s), {songs} canción(es), {shows} show(s). Se copia a tu biblioteca local; el pedal no se toca.",
+  "share.askPack": "«{name}» es un pack ZIP (tonos e IRs). ¿Importarlo a la biblioteca?",
+  "share.load": "Cargar",
+  "share.imported": "Cargado · {name} ({presets} tonos, {songs} canciones)",
+  "share.packsHint":
+    "Comparte un tono, canción o show como .cubecontrol.json (WhatsApp, Drive, cable). El ZIP sigue siendo el pack con IRs.",
   "lib.saveToneDialog": "Guardar tono",
   "lib.updateTone": "Actualizar tono",
   "lib.saveToneLive": "Guardar tono live",

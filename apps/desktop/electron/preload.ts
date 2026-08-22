@@ -96,6 +96,30 @@ export type ToneHubLibraryApi = {
   }) => Promise<PackLibraryItem>;
   exportPack: (packId: string) => Promise<{ path: string } | null>;
   importPack: () => Promise<{ path: string; pack: PackLibraryItem } | null>;
+  exportShare: (
+    kind: "preset" | "song" | "show",
+    id: string,
+  ) => Promise<{ path: string; name: string } | null>;
+  inspectShare: () => Promise<
+    | {
+        readonly kind: "share";
+        readonly path: string;
+        readonly name: string;
+        readonly presets: number;
+        readonly songs: number;
+        readonly shows: number;
+        readonly payload: unknown;
+      }
+    | { readonly kind: "pack"; readonly path: string; readonly name: string }
+    | null
+  >;
+  importShare: (payload: unknown) => Promise<{
+    readonly name: string;
+    readonly presets: number;
+    readonly songs: number;
+    readonly shows: number;
+  }>;
+  importPackPath: (filePath: string) => Promise<PackLibraryItem>;
   pushUndo: (snapshot: {
     label: string;
     params: LiveParamsSnapshot;
@@ -174,6 +198,10 @@ const library: ToneHubLibraryApi = {
   createPack: (input) => ipcRenderer.invoke("library:createPack", input),
   exportPack: (packId) => ipcRenderer.invoke("library:exportPack", packId),
   importPack: () => ipcRenderer.invoke("library:importPack"),
+  exportShare: (kind, id) => ipcRenderer.invoke("library:exportShare", kind, id),
+  inspectShare: () => ipcRenderer.invoke("library:inspectShare"),
+  importShare: (payload) => ipcRenderer.invoke("library:importShare", payload),
+  importPackPath: (filePath) => ipcRenderer.invoke("library:importPackPath", filePath),
   pushUndo: (snapshot) => ipcRenderer.invoke("library:pushUndo", snapshot),
   undo: (current) => ipcRenderer.invoke("library:undo", current),
   redo: (current) => ipcRenderer.invoke("library:redo", current),

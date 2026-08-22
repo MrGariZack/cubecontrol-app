@@ -1,24 +1,13 @@
 import { CubeBabySession } from "@tonehub/cube-baby-api";
-import {
-  FAKE_INPUT,
-  FAKE_OUTPUT,
-  FakeCubeBabyTransport,
-} from "@tonehub/cube-baby-api/testing";
-
-export type DemoConnection = {
-  readonly mode: "demo";
-  readonly deviceName: string;
-  readonly inputPortId: string;
-  readonly outputPortId: string;
-  readonly bankSummary: string;
-  close: () => Promise<void>;
-};
+import { FAKE_INPUT, FAKE_OUTPUT, FakeCubeBabyTransport } from "@tonehub/cube-baby-api/testing";
+import { bankSummary, slotToLive } from "./live";
+import type { DeviceConnection } from "./types";
 
 /**
- * Lab path until Android/iOS NativeMidiHost exists.
- * Uses the core fake device so UI can exercise CubeBabySession offline.
+ * Offline path: FakeCubeBabyTransport so Live / Set / Escenario work without a pedal.
+ * USB-OTG uses `connectUsb()` instead.
  */
-export async function connectDemoSession(): Promise<DemoConnection> {
+export async function connectDemoSession(): Promise<DeviceConnection> {
   const transport = new FakeCubeBabyTransport();
   const session = await CubeBabySession.open(transport, {
     inputPortId: FAKE_INPUT.id,
@@ -28,18 +17,23 @@ export async function connectDemoSession(): Promise<DemoConnection> {
   try {
     const identity = await session.identify({ timeoutMs: 500 });
     const bank = await session.readPresetBank({ timeoutMs: 500 });
-    const slotA = bank.slots[0];
+    const live = slotToLive(bank.slots[0]);
 
     return {
       mode: "demo",
+      session,
       deviceName: identity.reportedName,
       inputPortId: FAKE_INPUT.id,
       outputPortId: FAKE_OUTPUT.id,
-      bankSummary: `A gain ${slotA.gain} · cab ${slotA.cabinet}`,
+      bankSummary: bankSummary(bank),
+      live,
+      bank,
+      slot: "A",
       close: async () => {
         await session.close();
         await transport.dispose();
       },
+      onDetached: () => () => undefined,
     };
   } catch (error) {
     await session.close();

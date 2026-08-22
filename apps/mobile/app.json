@@ -1,17 +1,99 @@
 {
   "expo": {
-    "name": "ToneHub",
+    "name": "CubeControl",
     "slug": "tonehub",
+    "scheme": "cubecontrol",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "dark",
+    "backgroundColor": "#07090C",
+    "androidNavigationBar": {
+      "backgroundColor": "#07090C",
+      "barStyle": "light-content"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-dev-client",
+      "expo-document-picker",
+      "expo-file-system",
+      "expo-sharing",
+      "@tonehub/midi-host-android",
+      "./plugins/withBrandFonts.js"
+    ],
+    "experiments": {
+      "typedRoutes": false
+    },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSMicrophoneUsageDescription": "CubeControl uses the microphone for the Tuner."
+      }
     },
     "android": {
+      "package": "com.tonehub.cubecontrol",
+      "permissions": ["RECORD_AUDIO"],
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "category": ["BROWSABLE", "DEFAULT"],
+          "data": [
+            {
+              "scheme": "content",
+              "mimeType": "application/json"
+            },
+            {
+              "scheme": "content",
+              "mimeType": "text/plain"
+            },
+            {
+              "scheme": "content",
+              "mimeType": "application/octet-stream"
+            },
+            {
+              "scheme": "content",
+              "mimeType": "application/zip"
+            },
+            {
+              "scheme": "content",
+              "mimeType": "application/x-zip-compressed"
+            },
+            {
+              "scheme": "file",
+              "mimeType": "application/json"
+            },
+            {
+              "scheme": "file",
+              "mimeType": "text/plain"
+            },
+            {
+              "scheme": "file",
+              "mimeType": "application/octet-stream"
+            },
+            {
+              "scheme": "file",
+              "mimeType": "application/zip"
+            },
+            {
+              "scheme": "file",
+              "mimeType": "application/x-zip-compressed"
+            }
+          ]
+        },
+        {
+          "action": "SEND",
+          "category": ["DEFAULT"],
+          "data": [
+            { "mimeType": "application/json" },
+            { "mimeType": "text/plain" },
+            { "mimeType": "application/zip" },
+            { "mimeType": "application/x-zip-compressed" },
+            { "mimeType": "*/*" }
+          ]
+        }
+      ],
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
+        "backgroundColor": "#07090C",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
@@ -19,7 +101,8 @@
       "predictiveBackGestureEnabled": false
     },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro"
     }
   }
 }

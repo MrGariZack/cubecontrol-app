@@ -21,3 +21,8 @@ Thumbs.db
 *.orig.*
 .env
 .env.*
+
+# Android native build output
+**/.gradle/
+**/.cxx/
+*.apk

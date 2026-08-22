@@ -12,6 +12,7 @@ import {
   type DiagnosticsExportInput,
 } from "./diagnostics.js";
 import { LibraryStore } from "./library/libraryStore.js";
+import { parseSharePayload, shareFileName } from "./library/shareFormat.js";
 import type { LibraryProfile } from "./library/types.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -313,6 +314,56 @@ app.whenReady().then(async () => {
     const bytes = new Uint8Array(await readFile(choice.filePaths[0]));
     const pack = await library.importPackZip(bytes);
     return { path: choice.filePaths[0], pack };
+  });
+  ipcMain.handle("library:exportShare", async (event, kind: "preset" | "song" | "show", id: string) => {
+    const win = BrowserWindow.fromWebContents(event.sender);
+    const payload = await library.buildShare(kind, id);
+    const options = {
+      title: "Compartir CubeControl",
+      defaultPath: shareFileName(payload.name),
+      filters: [{ name: "CubeControl", extensions: ["cubecontrol.json", "json"] }],
+    };
+    const choice =
+      win === null ? await dialog.showSaveDialog(options) : await dialog.showSaveDialog(win, options);
+    if (choice.canceled || choice.filePath === undefined) return null;
+    await writeFile(choice.filePath, `${JSON.stringify(payload, null, 2)}\n`, "utf8");
+    return { path: choice.filePath, name: payload.name };
+  });
+  ipcMain.handle("library:inspectShare", async (event) => {
+    const win = BrowserWindow.fromWebContents(event.sender);
+    const options = {
+      title: "Abrir archivo CubeControl",
+      properties: ["openFile" as const],
+      filters: [{ name: "CubeControl", extensions: ["cubecontrol.json", "json", "zip"] }],
+    };
+    const choice =
+      win === null ? await dialog.showOpenDialog(options) : await dialog.showOpenDialog(win, options);
+    if (choice.canceled || choice.filePaths[0] === undefined) return null;
+    const filePath = choice.filePaths[0];
+    const bytes = await readFile(filePath);
+    if (filePath.toLowerCase().endsWith(".zip") || (bytes[0] === 0x50 && bytes[1] === 0x4b)) {
+      return { kind: "pack" as const, path: filePath, name: path.basename(filePath, ".zip") };
+    }
+    const payload = parseSharePayload(bytes.toString("utf8"));
+    if (payload === null) throw new Error("Este archivo no es un tono, canción o show de CubeControl.");
+    return {
+      kind: "share" as const,
+      path: filePath,
+      name: payload.name,
+      presets: payload.presets.length,
+      songs: payload.songs.length,
+      shows: payload.shows.length,
+      payload,
+    };
+  });
+  ipcMain.handle("library:importShare", async (_event, payload: unknown) => {
+    const parsed = parseSharePayload(payload);
+    if (parsed === null) throw new Error("archivo CubeControl no reconocido");
+    return library.importShare(parsed);
+  });
+  ipcMain.handle("library:importPackPath", async (_event, filePath: string) => {
+    const bytes = new Uint8Array(await readFile(filePath));
+    return library.importPackZip(bytes);
   });
 
   ipcMain.handle(

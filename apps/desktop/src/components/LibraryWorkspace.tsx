@@ -600,6 +600,26 @@ export function LibraryWorkspace(props: LibraryWorkspaceProps) {
                     </button>
                     <button
                       type="button"
+                      className="lib-ws__ghost"
+                      disabled={busy}
+                      onClick={() =>
+                        void runBusy(async () => {
+                          const exported = await window.tonehubDesktop.library.exportShare(
+                            "preset",
+                            selectedPreset.id,
+                          );
+                          onStatus(
+                            exported
+                              ? t("share.exported", { path: exported.path })
+                              : t("common.cancelled"),
+                          );
+                        })
+                      }
+                    >
+                      {t("share.action")}
+                    </button>
+                    <button
+                      type="button"
                       className="lib-ws__danger"
                       disabled={busy}
                       onClick={() => void deletePreset(selectedPreset.id)}
@@ -938,6 +958,26 @@ export function LibraryWorkspace(props: LibraryWorkspaceProps) {
                     </button>
                     <button
                       type="button"
+                      className="lib-ws__ghost"
+                      disabled={busy}
+                      onClick={() =>
+                        void runBusy(async () => {
+                          const exported = await window.tonehubDesktop.library.exportShare(
+                            "song",
+                            selectedSong.id,
+                          );
+                          onStatus(
+                            exported
+                              ? t("share.exported", { path: exported.path })
+                              : t("common.cancelled"),
+                          );
+                        })
+                      }
+                    >
+                      {t("share.action")}
+                    </button>
+                    <button
+                      type="button"
                       className="lib-ws__danger"
                       disabled={busy}
                       onClick={() => void deleteSong(selectedSong.id)}
@@ -1080,6 +1120,26 @@ export function LibraryWorkspace(props: LibraryWorkspaceProps) {
                         }}
                       >
                         {t("lib.armAbc")}
+                      </button>
+                      <button
+                        type="button"
+                        className="lib-ws__ghost"
+                        disabled={busy}
+                        onClick={() =>
+                          void runBusy(async () => {
+                            const exported = await window.tonehubDesktop.library.exportShare(
+                              "show",
+                              selectedShow.id,
+                            );
+                            onStatus(
+                              exported
+                                ? t("share.exported", { path: exported.path })
+                                : t("common.cancelled"),
+                            );
+                          })
+                        }
+                      >
+                        {t("share.action")}
                       </button>
                       <button
                         type="button"
@@ -1298,10 +1358,60 @@ export function LibraryWorkspace(props: LibraryWorkspaceProps) {
             {moreTab === "export" ? (
               <div className="lib-ws__detail-card">
                 <h2 className="lib-ws__detail-title">{t("lib.packs")}</h2>
-                <p className="lib-ws__detail-meta">{t("lib.packsHint")}</p>
+                <p className="lib-ws__detail-meta">{t("share.packsHint")}</p>
                 <button
                   type="button"
                   className="lib-ws__primary"
+                  disabled={busy}
+                  onClick={() =>
+                    void (async () => {
+                      onError(null);
+                      const inspect = await window.tonehubDesktop.library.inspectShare();
+                      if (!inspect) {
+                        onStatus(t("common.cancelled"));
+                        return;
+                      }
+                      const ok = await confirm({
+                        title: t("share.askTitle"),
+                        body:
+                          inspect.kind === "pack"
+                            ? t("share.askPack", { name: inspect.name })
+                            : t("share.askBody", {
+                                name: inspect.name,
+                                presets: inspect.presets,
+                                songs: inspect.songs,
+                                shows: inspect.shows,
+                              }),
+                        confirmLabel: t("share.load"),
+                      });
+                      if (!ok) return;
+                      await runBusy(async () => {
+                        if (inspect.kind === "pack") {
+                          const pack = await window.tonehubDesktop.library.importPackPath(
+                            inspect.path,
+                          );
+                          onStatus(t("lib.packImported", { name: pack.name }));
+                          return;
+                        }
+                        const result = await window.tonehubDesktop.library.importShare(
+                          inspect.payload,
+                        );
+                        onStatus(
+                          t("share.imported", {
+                            name: result.name,
+                            presets: result.presets,
+                            songs: result.songs,
+                          }),
+                        );
+                      });
+                    })()
+                  }
+                >
+                  {t("share.importFile")}
+                </button>
+                <button
+                  type="button"
+                  className="lib-ws__ghost"
                   disabled={busy}
                   onClick={() =>
                     void runBusy(async () => {

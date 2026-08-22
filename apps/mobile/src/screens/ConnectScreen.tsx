@@ -1,40 +1,47 @@
-import { Outfit_500Medium, Outfit_700Bold, useFonts as useOutfit } from "@expo-google-fonts/outfit";
-import { Syne_700Bold, Syne_800ExtraBold, useFonts as useSyne } from "@expo-google-fonts/syne";
 import { StatusBar } from "expo-status-bar";
 import { useEffect, useRef, useState } from "react";
-import {
-  ActivityIndicator,
-  Animated,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
-import { connectDemoSession, type DemoConnection } from "../device/demoConnect";
-
-type Phase = "idle" | "connecting" | "connected" | "error";
+import { Animated, Platform, StyleSheet, Text, View } from "react-native";
+import { useRouter } from "expo-router";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { Button } from "../components/Button";
+import { SafetyGate } from "../components/SafetyGate";
+import { probeUsbPedal } from "../device/connect";
+import { useI18n } from "../i18n";
+import { useApp } from "../store/AppStore";
+import { colors, fonts } from "../theme/tokens";
 
 export function ConnectScreen() {
-  const [syneLoaded] = useSyne({ Syne_700Bold, Syne_800ExtraBold });
-  const [outfitLoaded] = useOutfit({ Outfit_500Medium, Outfit_700Bold });
-  const fontsReady = syneLoaded && outfitLoaded;
+  const { t, locale, setLocale } = useI18n();
+  const router = useRouter();
+  const {
+    connecting,
+    error,
+    errorCode,
+    usbAvailable,
+    reduceMotion,
+    safetyAccepted,
+    safetyReady,
+    connect,
+    clearError,
+    acceptSafety,
+  } = useApp();
+  const [pedalReady, setPedalReady] = useState(false);
+  const [showGate, setShowGate] = useState(false);
 
-  const [phase, setPhase] = useState<Phase>("idle");
-  const [connection, setConnection] = useState<DemoConnection | null>(null);
-  const [error, setError] = useState<string | null>(null);
-
-  const brandOpacity = useRef(new Animated.Value(0)).current;
-  const brandY = useRef(new Animated.Value(18)).current;
-  const ctaScale = useRef(new Animated.Value(1)).current;
+  const brandOpacity = useRef(new Animated.Value(reduceMotion ? 1 : 0)).current;
+  const brandY = useRef(new Animated.Value(reduceMotion ? 0 : 18)).current;
   const pulse = useRef(new Animated.Value(0.35)).current;
 
   useEffect(() => {
-    if (!fontsReady) return;
+    if (reduceMotion) {
+      brandOpacity.setValue(1);
+      brandY.setValue(0);
+      return;
+    }
     Animated.parallel([
       Animated.timing(brandOpacity, { toValue: 1, duration: 700, useNativeDriver: true }),
       Animated.timing(brandY, { toValue: 0, duration: 700, useNativeDriver: true }),
     ]).start();
-
     const loop = Animated.loop(
       Animated.sequence([
         Animated.timing(pulse, { toValue: 0.7, duration: 1400, useNativeDriver: true }),
@@ -43,113 +50,137 @@ export function ConnectScreen() {
     );
     loop.start();
     return () => loop.stop();
-  }, [fontsReady, brandOpacity, brandY, pulse]);
+  }, [reduceMotion, brandOpacity, brandY, pulse]);
 
   useEffect(() => {
-    return () => {
-      void connection?.close();
+    if (!usbAvailable || connecting) return;
+    let cancelled = false;
+    const tick = async () => {
+      const found = await probeUsbPedal();
+      if (!cancelled) setPedalReady(found);
     };
-  }, [connection]);
+    void tick();
+    const id = setInterval(() => void tick(), 2500);
+    return () => {
+      cancelled = true;
+      clearInterval(id);
+    };
+  }, [usbAvailable, connecting]);
 
-  async function onConnect() {
-    if (phase === "connecting") return;
-    setError(null);
-    setPhase("connecting");
-    Animated.sequence([
-      Animated.timing(ctaScale, { toValue: 0.96, duration: 90, useNativeDriver: true }),
-      Animated.timing(ctaScale, { toValue: 1, duration: 140, useNativeDriver: true }),
-    ]).start();
+  const usbError =
+    errorCode === "USB_HOST_UNAVAILABLE" ||
+    errorCode === "USB_DEVICE_NOT_FOUND" ||
+    errorCode === "USB_PERMISSION_DENIED" ||
+    errorCode === "USB_UNPLUGGED";
 
-    try {
-      await connection?.close();
-      const next = await connectDemoSession();
-      setConnection(next);
-      setPhase("connected");
-    } catch (err) {
-      setConnection(null);
-      setPhase("error");
-      setError(err instanceof Error ? err.message : String(err));
+  async function onUsb() {
+    clearError();
+    if (!safetyAccepted) {
+      setShowGate(true);
+      return;
     }
+    const ok = await connect("usb");
+    if (ok) router.replace("/(tabs)/live");
   }
 
-  async function onDisconnect() {
-    await connection?.close();
-    setConnection(null);
-    setPhase("idle");
-    setError(null);
+  async function onDemo() {
+    clearError();
+    setShowGate(false);
+    const ok = await connect("demo");
+    if (ok) router.replace("/(tabs)/live");
   }
 
-  if (!fontsReady) {
+  async function onGateAccepted() {
+    await acceptSafety();
+    setShowGate(false);
+    const ok = await connect("usb");
+    if (ok) router.replace("/(tabs)/live");
+  }
+
+  if (showGate || errorCode === "SAFETY_REQUIRED") {
     return (
-      <View style={styles.root}>
-        <ActivityIndicator color="#1F6B5C" />
-      </View>
+      <SafetyGate
+        onAccepted={() => void onGateAccepted()}
+        onCancel={() => {
+          setShowGate(false);
+          clearError();
+        }}
+      />
     );
   }
 
   return (
-    <View style={styles.root}>
-      <StatusBar style="dark" />
-      <Animated.View style={[styles.signal, { opacity: pulse }]} />
+    <SafeAreaView style={styles.root} edges={["top", "bottom"]}>
+      <StatusBar style="light" />
+      {!reduceMotion ? <Animated.View style={[styles.signal, { opacity: pulse }]} /> : null}
 
       <Animated.View style={{ opacity: brandOpacity, transform: [{ translateY: brandY }] }}>
-        <Text style={styles.brand}>CubeControl</Text>
-        <Text style={styles.headline}>Habla con tu CUBE Baby</Text>
-        <Text style={styles.support}>
-          Laboratorio UI sobre el hardware-core. Hoy: sesión demo sin pedal.
-        </Text>
+        <View style={styles.langRow}>
+          <Button
+            variant="ghost"
+            label={t("lang.es")}
+            accessibilityState={{ selected: locale === "es" }}
+            onPress={() => setLocale("es")}
+            style={styles.langBtn}
+          />
+          <Button
+            variant="ghost"
+            label={t("lang.en")}
+            accessibilityState={{ selected: locale === "en" }}
+            onPress={() => setLocale("en")}
+            style={styles.langBtn}
+          />
+        </View>
+        <Text style={styles.brand}>{t("connect.brand")}</Text>
+        <Text style={styles.headline}>{t("connect.headline")}</Text>
+        <Text style={styles.support}>{t("connect.support")}</Text>
       </Animated.View>
 
       <View style={styles.actions}>
-        {phase !== "connected" ? (
-          <Animated.View style={{ transform: [{ scale: ctaScale }] }}>
-            <Pressable
-              accessibilityRole="button"
-              onPress={() => void onConnect()}
-              style={({ pressed }) => [styles.cta, pressed && styles.ctaPressed]}
-              disabled={phase === "connecting"}
-            >
-              {phase === "connecting" ? (
-                <ActivityIndicator color="#F4F7F5" />
-              ) : (
-                <Text style={styles.ctaLabel}>Conectar (demo)</Text>
-              )}
-            </Pressable>
-          </Animated.View>
-        ) : (
-          <Pressable
-            accessibilityRole="button"
-            onPress={() => void onDisconnect()}
-            style={({ pressed }) => [styles.secondary, pressed && styles.ctaPressed]}
-          >
-            <Text style={styles.secondaryLabel}>Desconectar</Text>
-          </Pressable>
-        )}
-
-        {phase === "connected" && connection ? (
-          <View style={styles.statusBlock}>
-            <Text style={styles.statusTitle}>{connection.deviceName}</Text>
-            <Text style={styles.statusMeta}>
-              {connection.inputPortId} → {connection.outputPortId}
-            </Text>
-            <Text style={styles.statusMeta}>{connection.bankSummary}</Text>
-            <Text style={styles.modeTag}>modo demo · FakeCubeBabyTransport</Text>
-          </View>
+        {pedalReady ? (
+          <Text style={styles.ready} accessibilityLiveRegion="polite">
+            {t("connect.pedalReady")}
+          </Text>
+        ) : null}
+        <Button
+          label={t("connect.ctaUsb")}
+          loading={connecting}
+          disabled={!safetyReady}
+          onPress={() => void onUsb()}
+        />
+        <Button variant="secondary" label={t("connect.ctaDemo")} disabled={connecting} onPress={() => void onDemo()} />
+        {!safetyAccepted && safetyReady ? (
+          <Text style={styles.hintBody}>{t("connect.safetyNeeded")}</Text>
         ) : null}
 
-        {phase === "error" && error ? <Text style={styles.error}>{error}</Text> : null}
+        <View style={styles.hint} accessibilityLiveRegion="polite">
+          <Text style={styles.hintTitle}>{t("connect.otgTitle")}</Text>
+          <Text style={styles.hintBody}>{t("connect.otgBody")}</Text>
+          {Platform.OS === "android" ? <Text style={styles.hintBody}>{t("connect.onePort")}</Text> : null}
+          {Platform.OS === "ios" ? <Text style={styles.hintBody}>{t("connect.otgIos")}</Text> : null}
+          {!usbAvailable ? <Text style={styles.hintBody}>{t("connect.usbMissing")}</Text> : null}
+          {errorCode === "USB_PERMISSION_DENIED" ? (
+            <Text style={styles.hintBody}>{t("connect.permission")}</Text>
+          ) : null}
+          {errorCode === "USB_DEVICE_NOT_FOUND" || errorCode === "USB_UNPLUGGED" ? (
+            <Text style={styles.hintBody}>{t("connect.noDevice")}</Text>
+          ) : null}
+        </View>
+
+        {error && !usbError ? <Text style={styles.error}>{error}</Text> : null}
+        <Text style={styles.safety}>{t("connect.safety")}</Text>
       </View>
-    </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: "#E8EEEA",
+    backgroundColor: colors.bg,
     paddingHorizontal: 28,
-    paddingTop: 72,
-    paddingBottom: 40,
+    paddingTop: 24,
+    paddingBottom: 24,
     justifyContent: "space-between",
   },
   signal: {
@@ -157,89 +188,41 @@ const styles = StyleSheet.create({
     width: 420,
     height: 420,
     borderRadius: 210,
-    backgroundColor: "#9FD0C2",
+    backgroundColor: colors.greenMuted,
     top: -120,
     right: -140,
   },
+  langRow: { flexDirection: "row", gap: 8, marginBottom: 12 },
+  langBtn: { minWidth: 88, paddingHorizontal: 8 },
   brand: {
-    fontFamily: "Syne_800ExtraBold",
-    fontSize: 56,
-    lineHeight: 60,
-    color: "#10231F",
+    fontFamily: fonts.brand,
+    fontSize: 52,
+    lineHeight: 56,
+    color: colors.ink,
     letterSpacing: -1.2,
   },
   headline: {
     marginTop: 18,
-    fontFamily: "Syne_700Bold",
+    fontFamily: fonts.display,
     fontSize: 28,
     lineHeight: 34,
-    color: "#1A3530",
+    color: colors.inkSoft,
   },
   support: {
     marginTop: 12,
     maxWidth: 340,
-    fontFamily: "Outfit_500Medium",
+    fontFamily: fonts.body,
     fontSize: 16,
     lineHeight: 24,
-    color: "#3D564F",
+    color: colors.muted,
   },
-  actions: {
-    gap: 18,
-  },
-  cta: {
-    alignSelf: "stretch",
-    backgroundColor: "#1F6B5C",
-    paddingVertical: 18,
-    paddingHorizontal: 22,
-    alignItems: "center",
-    justifyContent: "center",
-    minHeight: 58,
-  },
-  ctaPressed: {
-    opacity: 0.88,
-  },
-  ctaLabel: {
-    fontFamily: "Outfit_700Bold",
-    fontSize: 17,
-    color: "#F4F7F5",
-    letterSpacing: 0.2,
-  },
-  secondary: {
-    alignSelf: "stretch",
-    borderWidth: 1.5,
-    borderColor: "#1F6B5C",
-    paddingVertical: 16,
-    alignItems: "center",
-  },
-  secondaryLabel: {
-    fontFamily: "Outfit_700Bold",
-    fontSize: 16,
-    color: "#1F6B5C",
-  },
-  statusBlock: {
-    gap: 4,
-  },
-  statusTitle: {
-    fontFamily: "Syne_700Bold",
-    fontSize: 22,
-    color: "#10231F",
-  },
-  statusMeta: {
-    fontFamily: "Outfit_500Medium",
-    fontSize: 14,
-    color: "#3D564F",
-  },
-  modeTag: {
-    marginTop: 8,
-    fontFamily: "Outfit_500Medium",
-    fontSize: 12,
-    color: "#5C7A72",
-    textTransform: "uppercase",
-    letterSpacing: 0.8,
-  },
-  error: {
-    fontFamily: "Outfit_500Medium",
-    fontSize: 14,
-    color: "#8B2E2E",
-  },
+  actions: { gap: 14 },
+  ready: { fontFamily: fonts.bodyBold, fontSize: 16, color: colors.green },
+  hint: { gap: 6 },
+  hintTitle: { fontFamily: fonts.bodyBold, fontSize: 16, color: colors.ink },
+  hintBody: { fontFamily: fonts.body, fontSize: 16, lineHeight: 24, color: colors.muted },
+  error: { fontFamily: fonts.body, fontSize: 16, color: colors.error },
+  safety: { fontFamily: fonts.body, fontSize: 13, lineHeight: 18, color: colors.muted2 },
 });
+
+export default ConnectScreen;

@@ -16,6 +16,7 @@ import type {
   SlotDiffRow,
   SongLibraryItem,
 } from "./types.js";
+import { SHARE_FORMAT, parseSharePayload, type SharePayload } from "./shareFormat.js";
 import { LIVE_PARAM_NAMES } from "@tonehub/cube-baby-protocol";
 
 const INDEX_NAME = "index.json";
@@ -585,6 +586,190 @@ export class LibraryStore {
       irIds: importedIrIds,
       ...(bankJson === undefined ? {} : { bankJson }),
     });
+  }
+
+  async buildShare(kind: "preset" | "song" | "show", id: string): Promise<SharePayload> {
+    const index = await this.list();
+    if (kind === "preset") {
+      const preset = index.presets.find((item) => item.id === id);
+      if (preset === undefined) throw new Error("Tono no encontrado");
+      return {
+        format: SHARE_FORMAT,
+        kind: "preset",
+        name: preset.name,
+        createdAt: nowIso(),
+        presets: [
+          {
+            name: preset.name,
+            notes: preset.notes,
+            tags: [...preset.tags],
+            profile: preset.profile,
+            params: { ...preset.params },
+          },
+        ],
+        songs: [],
+        shows: [],
+      };
+    }
+    if (kind === "song") {
+      const song = index.songs.find((item) => item.id === id);
+      if (song === undefined) throw new Error("Canción no encontrada");
+      const preset = index.presets.find((item) => item.id === song.presetId);
+      if (preset === undefined) throw new Error("Tono de la canción no encontrado");
+      return {
+        format: SHARE_FORMAT,
+        kind: "song",
+        name: song.name,
+        createdAt: nowIso(),
+        presets: [
+          {
+            name: preset.name,
+            notes: preset.notes,
+            tags: [...preset.tags],
+            profile: preset.profile,
+            params: { ...preset.params },
+          },
+        ],
+        songs: [
+          {
+            name: song.name,
+            notes: song.notes,
+            tags: [...song.tags],
+            presetIndex: 0,
+            ...(song.bpm !== undefined ? { bpm: song.bpm } : {}),
+            ...(song.delayNote ? { delayNote: song.delayNote } : {}),
+            ...(song.key ? { key: song.key } : {}),
+          },
+        ],
+        shows: [],
+      };
+    }
+    const show = index.shows.find((item) => item.id === id);
+    if (show === undefined) throw new Error("Show no encontrado");
+    const usedPresets: PresetLibraryItem[] = [];
+    const usedSongs: SongLibraryItem[] = [];
+    for (const songId of show.songIds) {
+      const song = index.songs.find((item) => item.id === songId);
+      if (!song) continue;
+      if (!usedPresets.some((item) => item.id === song.presetId)) {
+        const preset = index.presets.find((item) => item.id === song.presetId);
+        if (!preset) continue;
+        usedPresets.push(preset);
+      }
+      usedSongs.push(song);
+    }
+    if (usedPresets.length === 0) throw new Error("El show no tiene tonos para compartir");
+    return {
+      format: SHARE_FORMAT,
+      kind: "show",
+      name: show.name,
+      createdAt: nowIso(),
+      presets: usedPresets.map((preset) => ({
+        name: preset.name,
+        notes: preset.notes,
+        tags: [...preset.tags],
+        profile: preset.profile,
+        params: { ...preset.params },
+      })),
+      songs: usedSongs.map((song) => ({
+        name: song.name,
+        notes: song.notes,
+        tags: [...song.tags],
+        presetIndex: Math.max(
+          0,
+          usedPresets.findIndex((item) => item.id === song.presetId),
+        ),
+        ...(song.bpm !== undefined ? { bpm: song.bpm } : {}),
+        ...(song.delayNote ? { delayNote: song.delayNote } : {}),
+        ...(song.key ? { key: song.key } : {}),
+      })),
+      shows: [{ name: show.name, notes: show.notes, songIndexes: usedSongs.map((_, i) => i) }],
+    };
+  }
+
+  async importShare(payload: SharePayload): Promise<{
+    readonly name: string;
+    readonly presets: number;
+    readonly songs: number;
+    readonly shows: number;
+  }> {
+    await this.ensure();
+    const parsed = parseSharePayload(payload);
+    if (parsed === null) throw new Error("archivo CubeControl no reconocido");
+    const stamp = nowIso();
+    const index = await this.#readIndex();
+    const presets: PresetLibraryItem[] = [];
+    for (const preset of parsed.presets) {
+      const id = randomUUID();
+      const item: PresetLibraryItem = {
+        id,
+        kind: "preset",
+        name: preset.name,
+        notes: preset.notes,
+        tags: [...preset.tags],
+        profile: preset.profile,
+        params: preset.params as LiveParamsSnapshot,
+        createdAt: stamp,
+        updatedAt: stamp,
+      };
+      await writeFile(
+        path.join(this.presetsDir(), `${id}.json`),
+        `${JSON.stringify(item, null, 2)}\n`,
+      );
+      presets.push(item);
+      index.presets.unshift(item);
+    }
+    const songs: SongLibraryItem[] = [];
+    for (const song of parsed.songs) {
+      const id = randomUUID();
+      const presetId = presets[song.presetIndex]?.id ?? presets[0]!.id;
+      const item: SongLibraryItem = {
+        id,
+        kind: "song",
+        name: song.name,
+        notes: song.notes,
+        tags: [...song.tags],
+        presetId,
+        ...(song.bpm !== undefined ? { bpm: song.bpm } : {}),
+        ...(song.delayNote === "1/4" ||
+        song.delayNote === "1/8" ||
+        song.delayNote === "1/8d" ||
+        song.delayNote === "1/16"
+          ? { delayNote: song.delayNote }
+          : {}),
+        ...(song.key ? { key: song.key } : {}),
+        createdAt: stamp,
+        updatedAt: stamp,
+      };
+      await writeFile(path.join(this.songsDir(), `${id}.json`), `${JSON.stringify(item, null, 2)}\n`);
+      songs.push(item);
+      index.songs.unshift(item);
+    }
+    const shows: ShowLibraryItem[] = [];
+    for (const show of parsed.shows) {
+      const id = randomUUID();
+      const item: ShowLibraryItem = {
+        id,
+        kind: "show",
+        name: show.name,
+        notes: show.notes,
+        songIds: show.songIndexes
+          .map((songIndex) => songs[songIndex]?.id)
+          .filter((songId): songId is string => typeof songId === "string"),
+        createdAt: stamp,
+        updatedAt: stamp,
+      };
+      await writeFile(path.join(this.showsDir(), `${id}.json`), `${JSON.stringify(item, null, 2)}\n`);
+      shows.push(item);
+      index.shows.unshift(item);
+    }
+    await this.#writeIndex(index);
+    return {
+      name: parsed.name,
+      presets: presets.length,
+      songs: songs.length,
+      shows: shows.length,
+    };
   }
 
   libraryFingerprint(): string {

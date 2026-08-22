@@ -207,6 +207,12 @@ export function installDemoDesktopApi(connection: DesktopConnectionInfo): void {
     },
     exportPack: async () => null,
     importPack: async () => null,
+    exportShare: async () => null,
+    inspectShare: async () => null,
+    importShare: async () => ({ name: "demo", presets: 0, songs: 0, shows: 0 }),
+    importPackPath: async () => {
+      throw new Error("demo: importPackPath disabled");
+    },
     pushUndo: async () => {
       undo.undoCount += 1;
       return { ...undo };

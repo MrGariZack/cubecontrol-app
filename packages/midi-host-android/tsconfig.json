@@ -1,0 +1,13 @@
+{
+  "compilerOptions": {
+    "target": "ESNext",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "jsx": "react-native",
+    "skipLibCheck": true,
+    "noEmit": true,
+    "lib": ["ESNext"]
+  },
+  "include": ["src"]
+}
