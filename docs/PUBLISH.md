@@ -32,8 +32,8 @@ Desktop/
 2. Grab:
    - `CubeControl-x.y.z-win-x64.exe` — NSIS installer  
    - `CubeControl-x.y.z-portable.exe` — portable  
-   - `CubeControl-x.y.z-linux-x64.AppImage` — Linux, chmod +x and run  
-   - `CubeControl-x.y.z-linux-x64.deb` — Ubuntu/Debian  
+   - `CubeControl-x.y.z-linux-*.AppImage` — Linux, chmod +x and run  
+   - `CubeControl-x.y.z-linux-*.deb` — Ubuntu/Debian  
    - `CubeControl-x.y.z-android-arm64.apk` — Android sideload (USB-OTG)
 3. SmartScreen may warn on Windows (unsigned until Authenticode). Android asks to allow unknown sources. Linux AppImage may need `libfuse2`. See [`apps/desktop/RELEASE.md`](../apps/desktop/RELEASE.md).
 

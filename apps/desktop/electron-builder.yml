@@ -55,6 +55,7 @@ linux:
   category: AudioVideo
   synopsis: Unofficial CUBE Baby USB editor
   executableName: cubecontrol
+  maintainer: CubeControl contributors <cubecontrol@users.noreply.github.com>
   target:
     - target: AppImage
       arch:

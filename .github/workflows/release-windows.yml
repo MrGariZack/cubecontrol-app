@@ -95,8 +95,8 @@ jobs:
             - `CubeControl-*-portable.exe` — portable
 
             **Linux** x64
-            - `CubeControl-*-linux-x64.AppImage` — download, chmod +x, run
-            - `CubeControl-*-linux-x64.deb` — Ubuntu/Debian (`sudo apt install ./file.deb`)
+            - `CubeControl-*-linux-*.AppImage` — download, chmod +x, run
+            - `CubeControl-*-linux-*.deb` — Ubuntu/Debian (`sudo apt install ./file.deb`)
             - USB MIDI: reconnect the pedal after install (the .deb installs a udev rule)
 
             **Android** (sideload — not Play Store)

@@ -6,8 +6,8 @@
 |---|---|
 | `CubeControl-0.1.3-win-x64.exe` | Instalador **NSIS** Windows |
 | `CubeControl-0.1.3-portable.exe` | **Portable** Windows — no instala |
-| `CubeControl-0.1.3-linux-x64.AppImage` | Linux x64 — marcar ejecutable y abrir |
-| `CubeControl-0.1.3-linux-x64.deb` | Ubuntu/Debian — `sudo apt install ./…deb` |
+| `CubeControl-0.1.3-linux-x86_64.AppImage` | Linux x64 — marcar ejecutable y abrir |
+| `CubeControl-0.1.3-linux-amd64.deb` | Ubuntu/Debian — `sudo apt install ./…deb` |
 
 Windows: `%LOCALAPPDATA%\CubeControl-build\` (evita bloqueos EPERM en Desktop/OneDrive).  
 Linux: `apps/desktop/out/` (`pnpm desktop:dist:linux`).
@@ -33,8 +33,8 @@ Solo carpeta unpacked: `pnpm --filter @tonehub/desktop dist:dir`
 
 ## Linux (testers)
 
-1. Baja `CubeControl-*-linux-x64.AppImage`.
-2. `chmod +x CubeControl-*-linux-x64.AppImage && ./CubeControl-*-linux-x64.AppImage`
+1. Baja `CubeControl-*-linux-*.AppImage`.
+2. `chmod +x CubeControl-*-linux-*.AppImage && ./CubeControl-*-linux-*.AppImage`
 3. Si pide FUSE: `sudo apt install libfuse2` (Ubuntu 24: `libfuse2t64`).
 4. Conecta el CUBE por USB. El `.deb` instala la regla udev. Con AppImage, si **Conectar USB** no ve el pedal:
 
