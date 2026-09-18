@@ -24,6 +24,7 @@
     "@tonehub/midi-core": "workspace:*",
     "@tonehub/midi-host-android": "workspace:*",
     "@tonehub/midi-transport-native": "workspace:*",
+    "babel-preset-expo": "~57.0.6",
     "expo": "~57.0.12",
     "expo-constants": "~57.0.10",
     "expo-dev-client": "~57.0.11",
