@@ -8,6 +8,7 @@
     "desktop:build": "pnpm --filter @tonehub/desktop build",
     "desktop:dist": "pnpm --filter @tonehub/desktop dist",
     "desktop:dist:dir": "pnpm --filter @tonehub/desktop dist:dir",
+    "desktop:dist:linux": "pnpm --filter @tonehub/desktop dist:linux",
     "mobile": "pnpm --filter @tonehub/mobile start",
     "mobile:web": "pnpm --filter @tonehub/mobile web",
     "mobile:android": "pnpm --filter @tonehub/mobile android",

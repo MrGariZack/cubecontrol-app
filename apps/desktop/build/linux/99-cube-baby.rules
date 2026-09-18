@@ -1,0 +1,3 @@
+# M-VAVE CUBE Baby USB MIDI (VID 0x301A PID 0x5555)
+SUBSYSTEM=="usb", ATTR{idVendor}=="301a", ATTR{idProduct}=="5555", MODE="0666", TAG+="uaccess"
+KERNEL=="hidraw*", ATTRS{idVendor}=="301a", ATTRS{idProduct}=="5555", MODE="0666", TAG+="uaccess"

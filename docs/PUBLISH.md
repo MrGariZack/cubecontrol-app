@@ -32,8 +32,10 @@ Desktop/
 2. Grab:
    - `CubeControl-x.y.z-win-x64.exe` — NSIS installer  
    - `CubeControl-x.y.z-portable.exe` — portable  
+   - `CubeControl-x.y.z-linux-x64.AppImage` — Linux, chmod +x and run  
+   - `CubeControl-x.y.z-linux-x64.deb` — Ubuntu/Debian  
    - `CubeControl-x.y.z-android-arm64.apk` — Android sideload (USB-OTG)
-3. SmartScreen may warn on Windows (unsigned until Authenticode). Android asks to allow unknown sources. See [`apps/desktop/RELEASE.md`](../apps/desktop/RELEASE.md).
+3. SmartScreen may warn on Windows (unsigned until Authenticode). Android asks to allow unknown sources. Linux AppImage may need `libfuse2`. See [`apps/desktop/RELEASE.md`](../apps/desktop/RELEASE.md).
 
 ## Ship a release (maintainers)
 
@@ -58,7 +60,7 @@ git push origin master
 git push origin v0.1.0
 ```
 
-4. Workflow [`.github/workflows/release-windows.yml`](.github/workflows/release-windows.yml) builds Windows **and** the Android APK, then attaches them to the GitHub Release for that tag.
+4. Workflow [`.github/workflows/release-windows.yml`](.github/workflows/release-windows.yml) builds Windows, **Linux AppImage/.deb**, and the Android APK, then attaches them to the GitHub Release for that tag.
 
 Requires: both repos **public** (recommended), Actions enabled, and `contents: write` on the app repo.
 The workflow checks out **both** `cubecontrol` and `cubecontrol-app` as siblings.
@@ -98,7 +100,7 @@ gh release list --repo MrGariZack/cubecontrol-app
 - [ ] Both repos public (or shared with testers)
 - [ ] README links to Downloads / Safety / sibling repo
 - [ ] LICENSE MIT at repo root
-- [ ] `v0.1.0` tag + Release with `.exe` and `.apk` assets
+- [ ] `v0.1.0` tag + Release with `.exe`, `.AppImage` / `.deb`, and `.apk` assets
 - [ ] SAFETY.md linked from Release notes
 
 ## What is not automated yet

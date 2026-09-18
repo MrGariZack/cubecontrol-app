@@ -20,6 +20,10 @@ extraMetadata:
   main: dist-electron/main.js
 npmRebuild: true
 nodeGypRebuild: false
+protocols:
+  name: CubeControl
+  schemes:
+    - cubecontrol
 win:
   icon: build/icon.ico
   target:
@@ -46,8 +50,29 @@ nsis:
   installerHeaderIcon: build/icon.ico
 portable:
   artifactName: "${productName}-${version}-portable.${ext}"
+linux:
+  icon: build/icon.png
+  category: AudioVideo
+  synopsis: Unofficial CUBE Baby USB editor
+  executableName: cubecontrol
+  desktop:
+    Name: CubeControl
+    Comment: Unofficial CUBE Baby editor
+    Categories: AudioVideo;Audio;
+    StartupWMClass: cubecontrol
+  target:
+    - target: AppImage
+      arch:
+        - x64
+    - target: deb
+      arch:
+        - x64
+deb:
+  afterInstall: build/linux/after-install.sh
 extraResources:
   - from: SAFETY.md
     to: SAFETY.md
   - from: build/icon.ico
     to: icon.ico
+  - from: build/linux/99-cube-baby.rules
+    to: 99-cube-baby.rules

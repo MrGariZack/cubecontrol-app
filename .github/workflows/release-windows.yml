@@ -94,6 +94,11 @@ jobs:
             - `CubeControl-*-win-x64.exe` — NSIS installer
             - `CubeControl-*-portable.exe` — portable
 
+            **Linux** x64
+            - `CubeControl-*-linux-x64.AppImage` — download, chmod +x, run
+            - `CubeControl-*-linux-x64.deb` — Ubuntu/Debian (`sudo apt install ./file.deb`)
+            - USB MIDI: reconnect the pedal after install (the .deb installs a udev rule)
+
             **Android** (sideload — not Play Store)
             - `CubeControl-*-android-arm64.apk` — USB-OTG companion
             - Enable install from unknown sources
@@ -102,6 +107,85 @@ jobs:
             Prefer **Cabinet 8** for new IRs. Close CubeSuite before connecting.
 
             See [SAFETY.md](https://github.com/MrGariZack/cubecontrol-app/blob/master/apps/desktop/SAFETY.md) and [RELEASE.md](https://github.com/MrGariZack/cubecontrol-app/blob/master/apps/desktop/RELEASE.md).
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  linux:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout CubeControl app
+        uses: actions/checkout@v4
+        with:
+          path: tonehub-app
+
+      - name: Checkout ToneHub core
+        uses: actions/checkout@v4
+        with:
+          repository: MrGariZack/cubecontrol
+          path: Tonehub
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Linux native build deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libasound2-dev libusb-1.0-0-dev fakeroot
+
+      - name: Build hardware core
+        working-directory: Tonehub
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm build
+
+      - name: Install app deps
+        working-directory: tonehub-app
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck desktop
+        working-directory: tonehub-app
+        run: pnpm --filter @tonehub/desktop typecheck
+
+      - name: Build Linux AppImage and .deb
+        working-directory: tonehub-app
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: "false"
+        run: pnpm desktop:dist:linux
+
+      - name: Collect artifacts
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts
+          find tonehub-app/apps/desktop/out -maxdepth 1 \( -name '*.AppImage' -o -name '*.deb' \) -exec cp {} artifacts/ \;
+          ls -lh artifacts
+          test -n "$(find artifacts -name '*.AppImage' -print -quit)"
+          test -n "$(find artifacts -name '*.deb' -print -quit)"
+
+      - name: Upload artifacts (workflow)
+        uses: actions/upload-artifact@v4
+        with:
+          name: cubecontrol-linux
+          path: |
+            artifacts/*.AppImage
+            artifacts/*.deb
+
+      - name: Attach Linux builds to GitHub Release
+        if: startsWith(github.ref, 'refs/tags/') || github.event.inputs.attach_tag != ''
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.event.inputs.attach_tag || github.ref_name }}
+          files: |
+            artifacts/*.AppImage
+            artifacts/*.deb
+          generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
