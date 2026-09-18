@@ -55,11 +55,6 @@ linux:
   category: AudioVideo
   synopsis: Unofficial CUBE Baby USB editor
   executableName: cubecontrol
-  desktop:
-    Name: CubeControl
-    Comment: Unofficial CUBE Baby editor
-    Categories: AudioVideo;Audio;
-    StartupWMClass: cubecontrol
   target:
     - target: AppImage
       arch:
