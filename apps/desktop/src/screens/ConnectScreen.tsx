@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useI18n } from "../i18n";
 import type { DesktopConnectionInfo } from "../types/device";
 import { LanguageSwitcher } from "../components/LanguageSwitcher";
-import { SyncPanel } from "../components/SyncPanel";
+import { AccountMenu } from "../components/AccountMenu";
 import { useReportProblem } from "../report/ReportProblemContext";
 
 type ConnectScreenProps = {
@@ -62,6 +62,7 @@ export function ConnectScreen({ onConnected, onOpenLibrary }: ConnectScreenProps
   return (
     <main className="connect">
       <div className="connect__lang">
+        <AccountMenu />
         <LanguageSwitcher />
       </div>
       <div ref={signalRef} className="connect__signal" />
@@ -99,9 +100,6 @@ export function ConnectScreen({ onConnected, onOpenLibrary }: ConnectScreenProps
           {t("report.open")}
         </button>
         {phase === "error" && error ? <p className="connect__error">{error}</p> : null}
-      </div>
-      <div className="connect__sync">
-        <SyncPanel />
       </div>
     </main>
   );

@@ -11,6 +11,16 @@ Format: based on [Keep a Changelog](https://keepachangelog.com/). Versioning: [S
 - Pack → Show import round-trip
 - Signed Windows builds (Authenticode)
 
+## [0.1.3] — 2026-09-18
+
+### Added
+- Cloud library sync (Supabase, metadata only) between desktop and phone
+- Library and share work without the pedal connected
+- Account icon for sign-in / sync (replaces the studio strip)
+
+### Fixed
+- Sync session no longer looks signed-out after a hang, pause (HTTP 521/522), or failed token refresh
+
 ## [0.1.2] — 2026-08-21
 
 ### Added
@@ -42,6 +52,7 @@ Format: based on [Keep a Changelog](https://keepachangelog.com/). Versioning: [S
 - Unofficial / experimental USB writer — see `apps/desktop/SAFETY.md`
 - Builds are **unsigned** (SmartScreen expected)
 
+[0.1.3]: https://github.com/MrGariZack/cubecontrol-app/releases/tag/v0.1.3
 [0.1.2]: https://github.com/MrGariZack/cubecontrol-app/releases/tag/v0.1.2
 [0.1.1]: https://github.com/MrGariZack/cubecontrol-app/releases/tag/v0.1.1
 [0.1.0]: https://github.com/MrGariZack/cubecontrol-app/releases/tag/v0.1.0

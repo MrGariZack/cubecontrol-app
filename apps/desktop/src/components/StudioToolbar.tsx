@@ -1,6 +1,6 @@
 import type { PresetSlotId } from "@tonehub/cube-baby-protocol";
 import { useI18n } from "../i18n";
-import { SyncButton } from "./SyncButton";
+import { AccountMenu } from "./AccountMenu";
 
 const ALL_SLOTS: readonly PresetSlotId[] = ["A", "B", "C"];
 
@@ -101,7 +101,7 @@ export function StudioToolbar({
       <p className="studio-toolbar__status" aria-live="polite">
         {status ?? t("common.ready")}
       </p>
-      <SyncButton />
+      <AccountMenu />
     </header>
   );
 }

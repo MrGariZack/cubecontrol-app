@@ -65,6 +65,16 @@ SyncRemote ← supabaseRemote
 5. Desktop puede usar `apps/desktop/.env`; si no, los defaults públicos del
    paquete (anon key). Nunca `service_role` en el cliente.
 
+## Que el plan gratis no se pause
+
+Supabase **pausa** proyectos Free si Postgres tiene poca actividad ~7 días.
+Eso da HTTP 521/522 y el magic link no sale. Restore en el dashboard; hay
+hasta 1 año. Lo único que **garantiza** que no pause es pasar a Pro.
+
+El keep-alive vive en el VPS (`/opt/cubecontrol/supabase-keepalive.sh`,
+cron `17 8,16,0 * * *`). Es un `SELECT` por PostgREST; `/auth/v1/health` no
+cuenta.
+
 ## Auth
 
 Magic link `cubecontrol://`. Desktop también acepta OTP por código.

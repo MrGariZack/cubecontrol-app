@@ -5,6 +5,7 @@ export const en: Messages = {
   "lang.switch": "Language",
   "lang.en": "English",
   "lang.es": "Español",
+  "account.aria": "Account and sync",
 
   "common.cancel": "Cancel",
   "common.continue": "Continue",

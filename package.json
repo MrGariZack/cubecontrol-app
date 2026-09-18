@@ -1,6 +1,6 @@
 {
   "name": "tonehub-app",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "private": true,
   "packageManager": "pnpm@10.34.1",
   "scripts": {

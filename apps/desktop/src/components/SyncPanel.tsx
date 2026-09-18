@@ -39,9 +39,14 @@ export function SyncPanel() {
 
   const refresh = useCallback(async () => {
     try {
-      setStatus(await window.tonehubDesktop.sync.status());
+      const api = window.tonehubDesktop?.sync;
+      if (!api) {
+        setStatus({ configured: false, signedIn: false, email: null, lastSyncAt: null });
+        return;
+      }
+      setStatus(await api.status());
     } catch {
-      setStatus({ configured: false, signedIn: false, email: null, lastSyncAt: null });
+      setStatus({ configured: true, signedIn: false, email: null, lastSyncAt: null });
     }
   }, []);
 
@@ -50,11 +55,12 @@ export function SyncPanel() {
   }, [refresh]);
 
   useEffect(() => {
-    const unsubscribe = window.tonehubDesktop.sync.onSignedIn(() => {
+    const api = window.tonehubDesktop?.sync;
+    if (!api) return;
+    return api.onSignedIn(() => {
       setWaiting(false);
       void refresh();
     });
-    return unsubscribe;
   }, [refresh]);
 
   async function sendLink() {
@@ -116,7 +122,14 @@ export function SyncPanel() {
     await refresh();
   }
 
-  if (status === null) return null;
+  if (status === null) {
+    return (
+      <section className="sync-panel">
+        <h2 className="sync-panel__title">Sync</h2>
+        <p className="sync-panel__mute">Cargando…</p>
+      </section>
+    );
+  }
 
   if (!status.configured) {
     return (

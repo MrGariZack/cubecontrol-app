@@ -1,7 +1,7 @@
 {
   "name": "@tonehub/desktop",
   "productName": "CubeControl",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "CubeControl — USB editor for M-VAVE CUBE Baby (unofficial)",
   "author": "CubeControl contributors",
   "license": "MIT",

@@ -18,51 +18,25 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { DesktopLibraryRepository } from "../library/syncRepository";
 import type { LibraryStore } from "../library/libraryStore";
+import { DurableFileAuthStorage } from "./authStorage";
 import { supabaseConfig } from "./config";
 import type { SyncNowInput, SyncPrepareResult, SyncStatus } from "./types";
 
 export type { SyncNowInput, SyncPrepareResult, SyncStatus } from "./types";
 
-/**
- * Minimal `SupportedStorage` adapter so the Supabase auth session survives
- * app restarts (the Electron main process has no localStorage).
- */
-class FileAuthStorage {
-  readonly #file: string;
+const AUTH_STORAGE_KEY = "cubecontrol-auth";
 
-  constructor(file: string) {
-    this.#file = file;
-  }
-
-  async getItem(key: string): Promise<string | null> {
-    try {
-      const raw = JSON.parse(await readFile(this.#file, "utf8")) as Record<string, string>;
-      return raw[key] ?? null;
-    } catch {
-      return null;
-    }
-  }
-
-  async setItem(key: string, value: string): Promise<void> {
-    await mkdir(path.dirname(this.#file), { recursive: true });
-    let raw: Record<string, string> = {};
-    try {
-      raw = JSON.parse(await readFile(this.#file, "utf8")) as Record<string, string>;
-    } catch {
-      // first write
-    }
-    raw[key] = value;
-    await writeFile(this.#file, JSON.stringify(raw), "utf8");
-  }
-
-  async removeItem(key: string): Promise<void> {
-    try {
-      const raw = JSON.parse(await readFile(this.#file, "utf8")) as Record<string, string>;
-      delete raw[key];
-      await writeFile(this.#file, JSON.stringify(raw), "utf8");
-    } catch {
-      // nothing to remove
-    }
+async function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      promise,
+      new Promise<never>((_, reject) => {
+        timer = setTimeout(() => reject(new Error("timeout")), ms);
+      }),
+    ]);
+  } finally {
+    if (timer !== undefined) clearTimeout(timer);
   }
 }
 
@@ -72,8 +46,8 @@ class FileAuthStorage {
  */
 export class SyncBridge {
   readonly #syncDir: string;
-  readonly #sessionFile: string;
   readonly #stateFile: string;
+  readonly #authStorage: DurableFileAuthStorage;
   readonly #store: LibraryStore;
   #client: SupabaseClient | undefined;
   #engine: SyncEngine | undefined;
@@ -81,7 +55,7 @@ export class SyncBridge {
 
   constructor(userDataPath: string, store: LibraryStore) {
     this.#syncDir = path.join(userDataPath, "CubeControl", "sync");
-    this.#sessionFile = path.join(this.#syncDir, "session.json");
+    this.#authStorage = new DurableFileAuthStorage(path.join(this.#syncDir, "session.json"));
     this.#stateFile = path.join(this.#syncDir, "syncState.json");
     this.#store = store;
   }
@@ -89,13 +63,26 @@ export class SyncBridge {
   async status(): Promise<SyncStatus> {
     const client = await this.#ensureClient();
     if (client === null) {
-      return { configured: false, signedIn: false, email: null, lastSyncAt: null };
+      return { configured: false, signedIn: false, email: null, lastSyncAt: this.#lastSyncAt };
     }
-    const { data } = await client.auth.getSession();
+    const stored = await this.#authStorage.peek();
+    try {
+      const { data } = await withTimeout(client.auth.getSession(), 8000);
+      if (data.session !== null) {
+        return {
+          configured: true,
+          signedIn: true,
+          email: data.session.user.email ?? stored.email,
+          lastSyncAt: this.#lastSyncAt,
+        };
+      }
+    } catch {
+      // Network / paused project: do not treat as logout.
+    }
     return {
       configured: true,
-      signedIn: data.session !== null,
-      email: data.session?.user?.email ?? null,
+      signedIn: stored.hasRefresh,
+      email: stored.email,
       lastSyncAt: this.#lastSyncAt,
     };
   }
@@ -144,7 +131,15 @@ export class SyncBridge {
 
   async signOut(): Promise<void> {
     const client = await this.#ensureClient();
-    if (client !== null) await client.auth.signOut();
+    this.#authStorage.allowNextRemove();
+    if (client !== null) {
+      try {
+        await client.auth.signOut({ scope: "local" });
+      } catch {
+        // local sign-out should not depend on the network
+      }
+    }
+    await this.#authStorage.forceClear();
     this.#engine = undefined;
     this.#lastSyncAt = null;
   }
@@ -158,9 +153,7 @@ export class SyncBridge {
    * conflict UI instead of mixing two libraries blindly.
    */
   async prepareSync(): Promise<SyncPrepareResult> {
-    const client = await this.#requireClient();
-    const { data } = await client.auth.getSession();
-    if (data.session === null) throw new Error("No hay sesión iniciada");
+    const client = await this.#sessionClient();
     const state = await this.#loadState();
     const repository = new DesktopLibraryRepository(this.#store);
     const snapshot = await repository.snapshot();
@@ -193,8 +186,9 @@ export class SyncBridge {
     try {
       const client = await this.#ensureClient();
       if (client === null) return null;
+      const stored = await this.#authStorage.peek();
       const { data } = await client.auth.getSession();
-      if (data.session === null) return null;
+      if (data.session === null && !stored.hasRefresh) return null;
       const prepared = await this.prepareSync();
       if (prepared.kind === "conflict") return null;
       return await this.#sync({ policy: "normal" });
@@ -205,9 +199,7 @@ export class SyncBridge {
   }
 
   async #sync(input: SyncNowInput): Promise<SyncResult> {
-    const client = await this.#requireClient();
-    const { data } = await client.auth.getSession();
-    if (data.session === null) throw new Error("No hay sesión iniciada");
+    const client = await this.#sessionClient();
     const repository = new DesktopLibraryRepository(this.#store);
     const remote = new SupabaseRemote(client);
     const policy: FirstSyncPolicy = input.policy ?? "normal";
@@ -246,13 +238,46 @@ export class SyncBridge {
     if (cfg === null) return null;
     this.#client = createClient(cfg.url, cfg.anonKey, {
       auth: {
-        storage: new FileAuthStorage(this.#sessionFile),
+        storage: this.#authStorage,
+        storageKey: AUTH_STORAGE_KEY,
         persistSession: true,
         autoRefreshToken: true,
         detectSessionInUrl: false,
       },
     });
     return this.#client;
+  }
+
+  /** Live session, restoring tokens from disk if a refresh failed earlier. */
+  async #sessionClient(): Promise<SupabaseClient> {
+    const client = await this.#requireClient();
+    const { data } = await client.auth.getSession();
+    if (data.session !== null) return client;
+    const stored = await this.#authStorage.peek();
+    if (stored.accessToken && stored.refreshToken) {
+      const restored = await client.auth.setSession({
+        access_token: stored.accessToken,
+        refresh_token: stored.refreshToken,
+      });
+      if (restored.data.session !== null) return client;
+      if (restored.error) {
+        const status =
+          typeof restored.error === "object" && restored.error !== null && "status" in restored.error
+            ? Number((restored.error as { status?: unknown }).status)
+            : NaN;
+        if (status === 521 || status === 522 || status === 523) {
+          throw new Error(
+            "Supabase no responde. Si el proyecto estaba pausado, restáuralo y vuelve a sincronizar. La sesión se conserva.",
+          );
+        }
+      }
+    }
+    if (stored.hasRefresh) {
+      throw new Error(
+        "Hay sesión guardada pero Supabase no responde. Restaura el proyecto y sincroniza de nuevo.",
+      );
+    }
+    throw new Error("No hay sesión iniciada");
   }
 
   async #requireClient(): Promise<SupabaseClient> {

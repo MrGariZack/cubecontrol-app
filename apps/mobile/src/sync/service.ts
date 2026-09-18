@@ -17,6 +17,11 @@ import {
 import { SupabaseRemote } from "@tonehub/library-sync/supabase";
 import type { MobileLibrary } from "../library/types";
 import { createMobileClient } from "./client";
+import {
+  allowNextAuthRemove,
+  clearMobileAuth,
+  peekMobileSession,
+} from "./authStorage";
 import { MobileLibraryRepository } from "./repository";
 
 export type MobileSyncStatus = {
@@ -80,11 +85,24 @@ export class MobileSyncService {
   }
 
   async status(): Promise<MobileSyncStatus> {
-    const { data } = await this.#ensureClient().auth.getSession();
+    const stored = await peekMobileSession();
+    try {
+      const { data } = await this.#ensureClient().auth.getSession();
+      if (data.session !== null) {
+        return {
+          configured: true,
+          signedIn: true,
+          email: data.session.user.email ?? stored.email,
+          lastSyncAt: this.#lastSyncAt,
+        };
+      }
+    } catch {
+      // paused / offline — keep the stored login
+    }
     return {
       configured: true,
-      signedIn: data.session !== null,
-      email: data.session?.user?.email ?? null,
+      signedIn: stored.hasRefresh,
+      email: stored.email,
       lastSyncAt: this.#lastSyncAt,
     };
   }
@@ -113,14 +131,18 @@ export class MobileSyncService {
   }
 
   async signOut(): Promise<void> {
-    await this.#ensureClient().auth.signOut();
+    allowNextAuthRemove();
+    try {
+      await this.#ensureClient().auth.signOut({ scope: "local" });
+    } catch {
+      // local only
+    }
+    await clearMobileAuth();
     this.#lastSyncAt = null;
   }
 
   async prepareSync(): Promise<SyncPrepareResult> {
-    const client = this.#ensureClient();
-    const { data } = await client.auth.getSession();
-    if (data.session === null) throw new Error("No hay sesión iniciada");
+    const client = await this.#sessionClient();
     const state = await this.#loadState();
     const repository = new MobileLibraryRepository(this.#getLibrary());
     const snapshot = await repository.snapshot();
@@ -144,9 +166,7 @@ export class MobileSyncService {
   }
 
   async syncNow(input: SyncNowInput = {}): Promise<SyncResult> {
-    const client = this.#ensureClient();
-    const { data } = await client.auth.getSession();
-    if (data.session === null) throw new Error("No hay sesión iniciada");
+    const client = await this.#sessionClient();
 
     const repository = new MobileLibraryRepository(this.#getLibrary());
     const remote = new SupabaseRemote(client);
@@ -186,14 +206,35 @@ export class MobileSyncService {
 
   async autoSync(): Promise<SyncResult | null> {
     try {
+      const stored = await peekMobileSession();
       const { data } = await this.#ensureClient().auth.getSession();
-      if (data.session === null) return null;
+      if (data.session === null && !stored.hasRefresh) return null;
       const prepared = await this.prepareSync();
       if (prepared.kind === "conflict") return null;
       return await this.syncNow({ policy: "normal" });
     } catch {
       return null;
     }
+  }
+
+  async #sessionClient(): Promise<SupabaseClient> {
+    const client = this.#ensureClient();
+    const { data } = await client.auth.getSession();
+    if (data.session !== null) return client;
+    const stored = await peekMobileSession();
+    if (stored.accessToken && stored.refreshToken) {
+      const restored = await client.auth.setSession({
+        access_token: stored.accessToken,
+        refresh_token: stored.refreshToken,
+      });
+      if (restored.data.session !== null) return client;
+    }
+    if (stored.hasRefresh) {
+      throw new Error(
+        "Hay sesión guardada pero Supabase no responde. Restaura el proyecto y sincroniza de nuevo.",
+      );
+    }
+    throw new Error("No hay sesión iniciada");
   }
 
   async #loadState(): Promise<SyncState> {
