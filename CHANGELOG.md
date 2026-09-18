@@ -10,6 +10,7 @@ Format: based on [Keep a Changelog](https://keepachangelog.com/). Versioning: [S
 ### Planned
 - Pack → Show import round-trip
 - Signed Windows builds (Authenticode)
+- GitHub Release APK (same tag as Windows)
 
 ## [0.1.3] — 2026-09-18
 

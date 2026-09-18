@@ -9,7 +9,7 @@ Hardware protocol lives in the sibling core: [cubecontrol](https://github.com/Mr
 | **Telegram** | [CubeControl App](https://t.me/+fOVYVdn8-85mY2Zh) |
 | **App repo** | https://github.com/MrGariZack/cubecontrol-app |
 | **Core repo** | https://github.com/MrGariZack/cubecontrol |
-| **Downloads** | [Releases](https://github.com/MrGariZack/cubecontrol-app/releases) (Windows NSIS + portable) |
+| **Downloads** | [Releases](https://github.com/MrGariZack/cubecontrol-app/releases) (Windows NSIS + portable, Android APK) |
 | **Version** | `0.1.3` — see [`CHANGELOG.md`](CHANGELOG.md) |
 | **Publish guide** | [`docs/PUBLISH.md`](docs/PUBLISH.md) |
 

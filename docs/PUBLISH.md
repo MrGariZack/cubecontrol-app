@@ -1,6 +1,6 @@
 # Publishing CubeControl
 
-How repos, versions, and Windows downloads fit together.
+How repos, versions, and GitHub downloads (Windows + Android) fit together.
 
 ## Repositories
 
@@ -29,10 +29,11 @@ Desktop/
 
 1. Open **Releases** on the app repo:  
    https://github.com/MrGariZack/cubecontrol-app/releases
-2. Grab either:
+2. Grab:
    - `CubeControl-x.y.z-win-x64.exe` — NSIS installer  
-   - `CubeControl-x.y.z-portable.exe` — portable
-3. SmartScreen may warn (builds are unsigned until Authenticode). See [`apps/desktop/RELEASE.md`](apps/desktop/RELEASE.md).
+   - `CubeControl-x.y.z-portable.exe` — portable  
+   - `CubeControl-x.y.z-android-arm64.apk` — Android sideload (USB-OTG)
+3. SmartScreen may warn on Windows (unsigned until Authenticode). Android asks to allow unknown sources. See [`apps/desktop/RELEASE.md`](../apps/desktop/RELEASE.md).
 
 ## Ship a release (maintainers)
 
@@ -57,11 +58,33 @@ git push origin master
 git push origin v0.1.0
 ```
 
-4. Workflow [`.github/workflows/release-windows.yml`](.github/workflows/release-windows.yml) builds Windows artifacts and attaches them to the GitHub Release for that tag.
+4. Workflow [`.github/workflows/release-windows.yml`](.github/workflows/release-windows.yml) builds Windows **and** the Android APK, then attaches them to the GitHub Release for that tag.
 
 Requires: both repos **public** (recommended), Actions enabled, and `contents: write` on the app repo.
 The workflow checks out **both** `cubecontrol` and `cubecontrol-app` as siblings.
 If the core stays private, add a repo secret `CORE_CHECKOUT_TOKEN` (PAT with read access to `cubecontrol`).
+
+### Android signing (once)
+
+CI **will not** ship a debug-signed APK. Create a keystore on your PC (do not commit it):
+
+```powershell
+cd apps/mobile
+powershell -File scripts/create-release-keystore.ps1
+```
+
+Add these repository secrets (`Settings → Secrets and variables → Actions`):
+
+| Secret | Value |
+|--------|--------|
+| `ANDROID_KEYSTORE_BASE64` | one-line Base64 of the `.jks` (the script prints it) |
+| `ANDROID_KEYSTORE_PASSWORD` | keystore password |
+| `ANDROID_KEY_ALIAS` | `cubecontrol` (unless you changed it) |
+| `ANDROID_KEY_PASSWORD` | key password |
+
+Keep an offline backup of the `.jks`. If you lose it, testers have to uninstall to install a new APK.
+
+To attach an APK to an **existing** tag (e.g. `v0.1.3`) after secrets are in place: Actions → **Release** → Run workflow → `attach_tag` = `v0.1.3`.
 
 ### First-time GitHub CLI (optional)
 
@@ -75,11 +98,12 @@ gh release list --repo MrGariZack/cubecontrol-app
 - [ ] Both repos public (or shared with testers)
 - [ ] README links to Downloads / Safety / sibling repo
 - [ ] LICENSE MIT at repo root
-- [ ] `v0.1.0` tag + Release with `.exe` assets
+- [ ] `v0.1.0` tag + Release with `.exe` and `.apk` assets
 - [ ] SAFETY.md linked from Release notes
 
 ## What is not automated yet
 
 - Authenticode signing / notarization  
 - Auto-update inside the app  
+- Play Store listing (APK is GitHub Releases only)  
 - npm publish of `@tonehub/*` (still workspace-linked from the sibling clone)

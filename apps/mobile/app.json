@@ -3,7 +3,7 @@
     "name": "CubeControl",
     "slug": "tonehub",
     "scheme": "cubecontrol",
-    "version": "1.0.0",
+    "version": "0.1.3",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
@@ -16,7 +16,8 @@
       "expo-router",
       "expo-dev-client",
       "@tonehub/midi-host-android",
-      "./plugins/withBrandFonts.js"
+      "./plugins/withBrandFonts.js",
+      "./plugins/withReleaseSigning.js"
     ],
     "experiments": {
       "typedRoutes": false
@@ -29,6 +30,7 @@
     },
     "android": {
       "package": "com.tonehub.cubecontrol",
+      "versionCode": 13,
       "permissions": ["RECORD_AUDIO"],
       "intentFilters": [
         {

@@ -1,17 +1,27 @@
-name: Release Windows
+name: Release
 
 on:
   push:
     tags:
       - "v*"
   workflow_dispatch:
+    inputs:
+      attach_tag:
+        description: "Existing tag to attach artifacts to (e.g. v0.1.3). Leave empty to use the desktop package version."
+        required: false
+        type: string
 
 permissions:
   contents: write
 
+env:
+  NODE_VERSION: "22"
+  PNPM_VERSION: "10"
+
 jobs:
   windows:
     runs-on: windows-latest
+    timeout-minutes: 45
     steps:
       - name: Checkout CubeControl app
         uses: actions/checkout@v4
@@ -23,19 +33,16 @@ jobs:
         with:
           repository: MrGariZack/cubecontrol
           path: Tonehub
-          # Default GITHUB_TOKEN works when cubecontrol is public.
-          # If core is private, set repo secret CORE_CHECKOUT_TOKEN (PAT) and uncomment:
-          # token: ${{ secrets.CORE_CHECKOUT_TOKEN }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "22"
+          node-version: ${{ env.NODE_VERSION }}
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
         with:
-          version: 10
+          version: ${{ env.PNPM_VERSION }}
 
       - name: Build hardware core
         working-directory: Tonehub
@@ -54,7 +61,6 @@ jobs:
       - name: Build Windows installers
         working-directory: tonehub-app
         env:
-          # electron-builder output (avoid Desktop/OneDrive locks in CI too)
           CSC_IDENTITY_AUTO_DISCOVERY: "false"
         run: pnpm desktop:dist
 
@@ -72,21 +78,159 @@ jobs:
           name: cubecontrol-windows
           path: artifacts/*.exe
 
-      - name: Create GitHub Release
-        if: startsWith(github.ref, 'refs/tags/')
+      - name: Create GitHub Release (Windows)
+        if: startsWith(github.ref, 'refs/tags/') || github.event.inputs.attach_tag != ''
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ github.event.inputs.attach_tag || github.ref_name }}
           files: artifacts/*.exe
           generate_release_notes: true
           body: |
-            ## CubeControl ${{ github.ref_name }}
+            ## CubeControl ${{ github.event.inputs.attach_tag || github.ref_name }}
 
             Unofficial CUBE Baby editor. **Read SAFETY before IR ROM writes.**
 
-            - Prefer **Cabinet 8** for new IRs
-            - Builds are **unsigned** — SmartScreen may warn
-            - Close CubeSuite before connecting
+            **Windows** (unsigned — SmartScreen may warn)
+            - `CubeControl-*-win-x64.exe` — NSIS installer
+            - `CubeControl-*-portable.exe` — portable
+
+            **Android** (sideload — not Play Store)
+            - `CubeControl-*-android-arm64.apk` — USB-OTG companion
+            - Enable install from unknown sources
+            - Same GitHub signing key is required for in-place updates
+
+            Prefer **Cabinet 8** for new IRs. Close CubeSuite before connecting.
 
             See [SAFETY.md](https://github.com/MrGariZack/cubecontrol-app/blob/master/apps/desktop/SAFETY.md) and [RELEASE.md](https://github.com/MrGariZack/cubecontrol-app/blob/master/apps/desktop/RELEASE.md).
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  android:
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    steps:
+      - name: Checkout CubeControl app
+        uses: actions/checkout@v4
+        with:
+          path: tonehub-app
+
+      - name: Checkout ToneHub core
+        uses: actions/checkout@v4
+        with:
+          repository: MrGariZack/cubecontrol
+          path: Tonehub
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Build hardware core
+        working-directory: Tonehub
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm build
+
+      - name: Install app deps
+        working-directory: tonehub-app
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck mobile
+        working-directory: tonehub-app
+        run: pnpm --filter @tonehub/mobile typecheck
+
+      - name: Resolve version
+        working-directory: tonehub-app
+        run: |
+          set -euo pipefail
+          if [[ "${GITHUB_REF}" == refs/tags/v* ]]; then
+            V="${GITHUB_REF_NAME#v}"
+          elif [ -n "${{ github.event.inputs.attach_tag }}" ]; then
+            V="${{ github.event.inputs.attach_tag }}"
+            V="${V#v}"
+          else
+            V="$(node -p "require('./apps/desktop/package.json').version")"
+          fi
+          echo "VERSION_NAME=${V}" >> "$GITHUB_ENV"
+          echo "Resolved versionName=${V}"
+
+      - name: Set native version
+        working-directory: tonehub-app/apps/mobile
+        run: node scripts/set-native-version.cjs "${VERSION_NAME}" "$((1000 + ${{ github.run_number }}))"
+
+      - name: Decode release keystore
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        run: |
+          set -euo pipefail
+          if [ -z "${ANDROID_KEYSTORE_BASE64}" ]; then
+            echo "Missing secret ANDROID_KEYSTORE_BASE64."
+            echo "Generate it once: apps/mobile/scripts/create-release-keystore.ps1"
+            echo "Then add ANDROID_KEYSTORE_BASE64, ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_ALIAS, ANDROID_KEY_PASSWORD."
+            exit 1
+          fi
+          echo "${ANDROID_KEYSTORE_BASE64}" | base64 -d > "${RUNNER_TEMP}/cubecontrol-release.jks"
+          echo "CUBECONTROL_RELEASE_STORE_FILE=${RUNNER_TEMP}/cubecontrol-release.jks" >> "$GITHUB_ENV"
+
+      - name: Prebuild Android (Expo CNG)
+        working-directory: tonehub-app/apps/mobile
+        env:
+          CI: "1"
+          EXPO_NO_TELEMETRY: "1"
+        run: pnpm exec expo prebuild --platform android --clean --non-interactive --no-install
+
+      - name: Assemble release APK
+        working-directory: tonehub-app/apps/mobile/android
+        env:
+          CUBECONTROL_RELEASE_STORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          CUBECONTROL_RELEASE_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          CUBECONTROL_RELEASE_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          if [ -z "${CUBECONTROL_RELEASE_STORE_PASSWORD}" ] || [ -z "${CUBECONTROL_RELEASE_KEY_ALIAS}" ] || [ -z "${CUBECONTROL_RELEASE_KEY_PASSWORD}" ]; then
+            echo "Missing Android signing secrets (PASSWORD / KEY_ALIAS / KEY_PASSWORD)."
+            exit 1
+          fi
+          echo "sdk.dir=${ANDROID_HOME}" > local.properties
+          chmod +x gradlew
+          ./gradlew app:assembleRelease -x lint -x test --no-daemon \
+            -PreactNativeArchitectures=arm64-v8a
+
+      - name: Collect APK
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts
+          src="tonehub-app/apps/mobile/android/app/build/outputs/apk/release/app-release.apk"
+          dest="artifacts/CubeControl-${VERSION_NAME}-android-arm64.apk"
+          cp "$src" "$dest"
+          ls -lh artifacts
+
+      - name: Upload artifacts (workflow)
+        uses: actions/upload-artifact@v4
+        with:
+          name: cubecontrol-android
+          path: artifacts/*.apk
+
+      - name: Attach APK to GitHub Release
+        if: startsWith(github.ref, 'refs/tags/') || github.event.inputs.attach_tag != ''
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.event.inputs.attach_tag || github.ref_name }}
+          files: artifacts/*.apk
+          generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
