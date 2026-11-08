@@ -119,6 +119,18 @@
   font-size: 15px;
 }
 
+.lib-ws__show-title-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.lib-ws__show-title-form .lib-ws__show-name {
+  flex: 1 1 220px;
+  min-width: 0;
+}
+
 .lib-ws__chips {
   display: flex;
   flex-wrap: wrap;

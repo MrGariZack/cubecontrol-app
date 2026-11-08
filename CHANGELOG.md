@@ -13,6 +13,12 @@ Format: based on [Keep a Changelog](https://keepachangelog.com/). Versioning: [S
 
 ## [0.1.4] — 2026-11-07
 
+### Android refresh
+- Added searchable in-app help and a practice show.
+- Added Clips with camera and audio recording, an optional pedal overlay, and MP4 export.
+- Redesigned Stage to separate song navigation from applying tones to the pedal.
+- Made show saving explicit and clarified how to add the first song.
+
 ### Added
 - In-app help (`F1`): searchable guide and a full tour, in Spanish and English
 - Performance clips: camera, pedal audio, and the virtual pedal in one local video

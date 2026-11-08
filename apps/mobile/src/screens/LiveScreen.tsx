@@ -1,4 +1,5 @@
 import { LIVE_PARAM_MAX, type LiveParamName, type PresetSlotId } from "@tonehub/cube-baby-protocol";
+import { router, useIsFocused } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useState } from "react";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
@@ -18,7 +19,7 @@ import type { LiveParamsSnapshot } from "../library/types";
 import { useApp } from "../store/AppStore";
 import { LIVE_BLOCKS, type BlockId, type LiveBlockDef } from "../studio/blocks";
 import { PEDAL_LOOKS } from "../studio/pedalLooks";
-import { colors, fonts } from "../theme/tokens";
+import { colors, fonts, radii } from "../theme/tokens";
 import { confirmAction } from "../ui/confirm";
 
 type PendingBank = { readonly kind: "save" } | { readonly kind: "copy"; readonly to: PresetSlotId };
@@ -32,6 +33,7 @@ function blockEngaged(block: LiveBlockDef, live: LiveParamsSnapshot): boolean {
 
 export function LiveScreen() {
   const { t } = useI18n();
+  const focused = useIsFocused();
   const {
     connection,
     live,
@@ -64,7 +66,7 @@ export function LiveScreen() {
   const [pendingBank, setPendingBank] = useState<PendingBank | null>(null);
   const [openBlock, setOpenBlock] = useState<BlockId | null>("drive");
 
-  useKeepAwake(connection?.mode === "usb");
+  useKeepAwake(focused && connection?.mode === "usb");
 
   if (connection === null || live === null) {
     return (
@@ -167,6 +169,11 @@ export function LiveScreen() {
         </View>
 
         <SessionBanner error={error} status={status} busy={busy} />
+
+        <View style={styles.tools}>
+          <Button variant="secondary" label={t("clips.title")} onPress={() => router.push("/clips")} />
+          <Button variant="ghost" label={t("guide.title")} onPress={() => router.push("/help")} />
+        </View>
 
         <LiveToolbar
           busy={busy}
@@ -272,6 +279,7 @@ export function LiveScreen() {
 }
 
 const styles = StyleSheet.create({
+  tools: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   safe: { flex: 1, backgroundColor: colors.bg },
   scroll: { paddingHorizontal: 16, paddingBottom: 28, gap: 18 },
   top: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", gap: 12, paddingHorizontal: 6 },
@@ -286,6 +294,7 @@ const styles = StyleSheet.create({
   device: { fontFamily: fonts.display, fontSize: 26, color: colors.ink, marginTop: 4 },
   meta: { fontFamily: fonts.body, fontSize: 16, color: colors.muted, marginTop: 4 },
   board: {
+    borderRadius: radii.panel,
     gap: 10,
     padding: 10,
     backgroundColor: "#141A14",
@@ -312,6 +321,7 @@ const styles = StyleSheet.create({
   row: { flexDirection: "row", gap: 10 },
   cell: { flex: 1 },
   bay: {
+    borderRadius: radii.panel,
     gap: 12,
     padding: 12,
     borderWidth: 1,

@@ -1,6 +1,6 @@
 import { StatusBar } from "expo-status-bar";
 import { useEffect, useRef, useState } from "react";
-import { Animated, Platform, StyleSheet, Text, View } from "react-native";
+import { Animated, Platform, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Button } from "../components/Button";
@@ -8,7 +8,7 @@ import { SafetyGate } from "../components/SafetyGate";
 import { probeUsbPedal } from "../device/connect";
 import { useI18n } from "../i18n";
 import { useApp } from "../store/AppStore";
-import { colors, fonts } from "../theme/tokens";
+import { colors, fonts, radii } from "../theme/tokens";
 
 export function ConnectScreen() {
   const { t, locale, setLocale } = useI18n();
@@ -125,6 +125,7 @@ export function ConnectScreen() {
     <SafeAreaView style={styles.root} edges={["top", "bottom"]}>
       <StatusBar style="light" />
       {!reduceMotion ? <Animated.View style={[styles.signal, { opacity: pulse }]} /> : null}
+      <ScrollView contentContainerStyle={styles.content}>
 
       <Animated.View style={{ opacity: brandOpacity, transform: [{ translateY: brandY }] }}>
         <View style={styles.langRow}>
@@ -168,6 +169,7 @@ export function ConnectScreen() {
         />
         <Text style={styles.hintBody}>{t("connect.libraryHint")}</Text>
         <Button variant="ghost" label={t("connect.ctaDemo")} disabled={connecting} onPress={() => void onDemo()} />
+        <Button variant="secondary" label={t("guide.title")} onPress={() => router.push("/help")} />
         {!safetyAccepted && safetyReady ? (
           <Text style={styles.hintBody}>{t("connect.safetyNeeded")}</Text>
         ) : null}
@@ -189,6 +191,7 @@ export function ConnectScreen() {
         {error && !usbError ? <Text style={styles.error}>{error}</Text> : null}
         <Text style={styles.safety}>{t("connect.safety")}</Text>
       </View>
+      </ScrollView>
     </SafeAreaView>
   );
 }
@@ -197,10 +200,14 @@ const styles = StyleSheet.create({
   root: {
     flex: 1,
     backgroundColor: colors.bg,
-    paddingHorizontal: 28,
-    paddingTop: 24,
-    paddingBottom: 24,
-    justifyContent: "space-between",
+  },
+  content: {
+    flexGrow: 1,
+    width: "100%",
+    maxWidth: 540,
+    alignSelf: "center",
+    padding: 24,
+    gap: 24,
   },
   signal: {
     position: "absolute",
@@ -237,7 +244,7 @@ const styles = StyleSheet.create({
   },
   actions: { gap: 14 },
   ready: { fontFamily: fonts.bodyBold, fontSize: 16, color: colors.green },
-  hint: { gap: 6 },
+  hint: { gap: 6, padding: 14, borderRadius: radii.panel, backgroundColor: colors.bg1 },
   hintTitle: { fontFamily: fonts.bodyBold, fontSize: 16, color: colors.ink },
   hintBody: { fontFamily: fonts.body, fontSize: 16, lineHeight: 24, color: colors.muted },
   error: { fontFamily: fonts.body, fontSize: 16, color: colors.error },

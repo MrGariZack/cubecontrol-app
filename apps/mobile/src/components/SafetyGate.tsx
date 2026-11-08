@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useI18n } from "../i18n";
-import { colors, fonts, HIT } from "../theme/tokens";
+import { colors, fonts, HIT, radii } from "../theme/tokens";
 import { Button } from "./Button";
 
 const TIER_IDS = ["live", "bank", "ir"] as const;
@@ -108,7 +108,7 @@ const styles = StyleSheet.create({
   },
   title: { fontFamily: fonts.display, fontSize: 28, color: colors.ink, marginTop: 4 },
   lead: { fontFamily: fonts.body, fontSize: 16, lineHeight: 24, color: colors.muted },
-  tier: { padding: 12, gap: 4, backgroundColor: colors.surface, borderLeftWidth: 4 },
+  tier: { borderRadius: radii.control, padding: 12, gap: 4, backgroundColor: colors.surface, borderLeftWidth: 4 },
   tierLevel: { fontFamily: fonts.bodyBold, fontSize: 13, letterSpacing: 0.6, color: colors.muted2 },
   tierTitle: { fontFamily: fonts.bodyBold, fontSize: 16, color: colors.ink },
   tierBody: { fontFamily: fonts.body, fontSize: 15, lineHeight: 22, color: colors.muted },

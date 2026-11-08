@@ -270,9 +270,10 @@ export function AppProvider({ children }: { readonly children: ReactNode }) {
     return run;
   }, []);
 
-  const persist = useCallback(async (next: MobileLibrary) => {
-    setLibrary(next);
+  const persist = useCallback(async (next: MobileLibrary, waitForDisk = false) => {
+    if (!waitForDisk) setLibrary(next);
     await saveLibrary(next);
+    if (waitForDisk) setLibrary(next);
     if (skipAutoSyncRef.current) return;
     if (autoSyncTimerRef.current) clearTimeout(autoSyncTimerRef.current);
     autoSyncTimerRef.current = setTimeout(() => {
@@ -1436,7 +1437,7 @@ export function AppProvider({ children }: { readonly children: ReactNode }) {
         createdAt: stamp,
         updatedAt: stamp,
       };
-      await persist({ ...library, shows: [item, ...library.shows] });
+      await persist({ ...library, shows: [item, ...library.shows] }, true);
       setActiveShowId(item.id);
       setSongIndexState(0);
       return item.id;
@@ -1453,7 +1454,7 @@ export function AppProvider({ children }: { readonly children: ReactNode }) {
         shows: library.shows.map((show) =>
           show.id === showId ? { ...show, name: trimmed, updatedAt: nowIso() } : show,
         ),
-      });
+      }, true);
     },
     [library, persist],
   );
@@ -1465,7 +1466,7 @@ export function AppProvider({ children }: { readonly children: ReactNode }) {
           ? { ...show, songIds: [...show.songIds, songId], updatedAt: nowIso() }
           : show,
       );
-      await persist({ ...library, shows });
+      await persist({ ...library, shows }, true);
     },
     [library, persist],
   );
@@ -1477,7 +1478,7 @@ export function AppProvider({ children }: { readonly children: ReactNode }) {
           ? { ...show, songIds: show.songIds.filter((id) => id !== songId), updatedAt: nowIso() }
           : show,
       );
-      await persist({ ...library, shows });
+      await persist({ ...library, shows }, true);
     },
     [library, persist],
   );
@@ -1494,7 +1495,7 @@ export function AppProvider({ children }: { readonly children: ReactNode }) {
         ids.splice(to, 0, songId);
         return { ...show, songIds: ids, updatedAt: nowIso() };
       });
-      await persist({ ...library, shows });
+      await persist({ ...library, shows }, true);
     },
     [library, persist],
   );
@@ -1525,7 +1526,7 @@ export function AppProvider({ children }: { readonly children: ReactNode }) {
 
   const deleteShow = useCallback(
     async (id: string) => {
-      await persist({ ...library, shows: library.shows.filter((item) => item.id !== id) });
+      await persist({ ...library, shows: library.shows.filter((item) => item.id !== id) }, true);
       if (activeShowId === id) {
         setActiveShowId(library.shows.find((item) => item.id !== id)?.id ?? null);
         setSongIndexState(0);

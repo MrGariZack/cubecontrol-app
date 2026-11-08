@@ -8,7 +8,7 @@ import {
   type StyleProp,
   type ViewStyle,
 } from "react-native";
-import { colors, fonts, HIT } from "../theme/tokens";
+import { colors, fonts, HIT, radii } from "../theme/tokens";
 
 type Variant = "primary" | "secondary" | "ghost" | "stage" | "stagePrimary";
 
@@ -65,6 +65,7 @@ const palettes: Record<Variant, { bg: string; fg: string; border: string; border
 const styles = StyleSheet.create({
   base: {
     minHeight: HIT,
+    borderRadius: radii.control,
     paddingHorizontal: 18,
     alignItems: "center",
     justifyContent: "center",
@@ -73,6 +74,7 @@ const styles = StyleSheet.create({
     fontFamily: fonts.bodyBold,
     fontSize: 16,
     letterSpacing: 0.2,
+    textAlign: "center",
   },
   pressed: { opacity: 0.88 },
   disabled: { opacity: 0.45 },

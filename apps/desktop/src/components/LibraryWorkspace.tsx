@@ -359,6 +359,7 @@ export function LibraryWorkspace(props: LibraryWorkspaceProps) {
         notes: show.notes,
         songIds: [...show.songIds],
       });
+      onStatus(t("lib.showSaved"));
     });
   }
 
@@ -1107,19 +1108,17 @@ export function LibraryWorkspace(props: LibraryWorkspaceProps) {
               ) : (
                 <div className="lib-ws__detail-card lib-ws__detail-card--wide">
                   <div className="lib-ws__show-head">
-                    <input
-                      className="lib-ws__show-name"
-                      defaultValue={selectedShow.name}
-                      key={selectedShow.id + selectedShow.updatedAt}
-                      disabled={busy}
-                      aria-label={t("lib.showName")}
-                      onBlur={(e) => {
-                        const name = e.target.value.trim();
-                        if (name && name !== selectedShow.name) {
-                          void renameShow(selectedShow, name);
-                        }
-                      }}
-                    />
+                    <form className="lib-ws__show-title-form"
+                      key={selectedShow.id + selectedShow.name}
+                      onSubmit={(event) => {
+                        event.preventDefault();
+                        const name = String(new FormData(event.currentTarget).get("show-name") ?? "").trim();
+                        if (!busy && name && name !== selectedShow.name) void renameShow(selectedShow, name);
+                      }}>
+                      <input className="lib-ws__show-name" name="show-name" defaultValue={selectedShow.name}
+                        disabled={busy} aria-label={t("lib.showName")} required />
+                      <button type="submit" className="lib-ws__ghost" disabled={busy}>{t("lib.saveShowName")}</button>
+                    </form>
                     <div className="lib-ws__detail-actions lib-ws__detail-actions--inline">
                       <button
                         type="button"
@@ -1252,7 +1251,19 @@ export function LibraryWorkspace(props: LibraryWorkspaceProps) {
                             + {s.name}
                           </button>
                         ))}
-                      {index.songs.every((s) => selectedShow.songIds.includes(s.id)) ? (
+                      {index.songs.length === 0 ? (
+                        <>
+                          <span className="lib-ws__empty">{t(index.presets.length ? "lib.showNoSongs" : "lib.showNeedsTone")}</span>
+                          <button type="button" className="lib-ws__ghost" disabled={busy} onClick={() => {
+                            const tone = index.presets[0];
+                            setSection(tone ? "songs" : "tones");
+                            if (tone) setSongDraft({
+                              step: 1, name: t("lib.newSong"), presetId: tone.id,
+                              irId: "", notes: "", bpm: "", delayNote: DEFAULT_DELAY_NOTE,
+                            });
+                          }}>{t(index.presets.length ? "lib.newSong" : "lib.tones")}</button>
+                        </>
+                      ) : index.songs.every((s) => selectedShow.songIds.includes(s.id)) ? (
                         <span className="lib-ws__empty">{t("lib.allSongsInShow")}</span>
                       ) : null}
                     </div>

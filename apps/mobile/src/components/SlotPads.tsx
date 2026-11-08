@@ -1,6 +1,6 @@
 import type { PresetSlotId } from "@tonehub/cube-baby-protocol";
 import { Pressable, StyleSheet, Text, View } from "react-native";
-import { colors, fonts, HIT } from "../theme/tokens";
+import { colors, fonts, HIT, radii } from "../theme/tokens";
 
 const SLOTS: readonly PresetSlotId[] = ["A", "B", "C"];
 
@@ -45,6 +45,7 @@ export function SlotPads({ slot, onSelect, labels, ledLabel, disabled }: Props) 
 const styles = StyleSheet.create({
   row: { flexDirection: "row", gap: 12 },
   pad: {
+    borderRadius: radii.control,
     flex: 1,
     minHeight: 96,
     backgroundColor: colors.surface,

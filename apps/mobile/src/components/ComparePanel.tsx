@@ -4,7 +4,7 @@ import type { LiveParamsSnapshot } from "../library/types";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { Button } from "./Button";
 import { useI18n } from "../i18n";
-import { colors, fonts, HIT } from "../theme/tokens";
+import { colors, fonts, HIT, radii } from "../theme/tokens";
 
 const SLOT_PAIRS: readonly { from: PresetSlotId; to: PresetSlotId }[] = [
   { from: "A", to: "B" },
@@ -153,7 +153,7 @@ export function ComparePanel({
 const COL = 88;
 
 const styles = StyleSheet.create({
-  root: { gap: 12, padding: 12, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.line },
+  root: { borderRadius: radii.panel, gap: 12, padding: 12, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.line },
   head: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
   title: { fontFamily: fonts.display, fontSize: 22, color: colors.ink, flex: 1 },
   hint: { fontFamily: fonts.body, fontSize: 15, lineHeight: 22, color: colors.muted },

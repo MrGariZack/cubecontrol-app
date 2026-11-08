@@ -3,7 +3,7 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useI18n } from "../../src/i18n";
 import { useApp } from "../../src/store/AppStore";
-import { colors, fonts, HIT } from "../../src/theme/tokens";
+import { colors, fonts, HIT, radii } from "../../src/theme/tokens";
 
 const TAB_NAMES = ["live", "tuner", "set", "device", "stage"] as const;
 type TabName = (typeof TAB_NAMES)[number];
@@ -82,7 +82,7 @@ function CompanionTabs({
             accessibilityLabel={labels[name]}
             accessibilityState={{ selected }}
             onPress={() => onPress(name)}
-            style={styles.tab}
+            style={[styles.tab, selected && styles.tabSelected]}
           >
             <Text
               style={[
@@ -91,6 +91,8 @@ function CompanionTabs({
                 selected && { color: colors.green },
               ]}
               numberOfLines={1}
+              adjustsFontSizeToFit
+              minimumFontScale={0.75}
             >
               {labels[name]}
             </Text>
@@ -106,6 +108,8 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     borderTopWidth: 1,
     paddingTop: 6,
+    paddingHorizontal: 6,
+    gap: 3,
   },
   tab: {
     flex: 1,
@@ -113,7 +117,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: 2,
+    borderRadius: radii.control,
   },
+  tabSelected: { backgroundColor: colors.greenMuted },
   label: {
     fontFamily: fonts.bodyBold,
     fontSize: 13,

@@ -10,7 +10,7 @@ import {
   timeByteToMs,
   type DelayNoteId,
 } from "../music/delaySync";
-import { colors, fonts, HIT } from "../theme/tokens";
+import { colors, fonts, HIT, radii } from "../theme/tokens";
 import { Button } from "./Button";
 
 type Props = {
@@ -141,6 +141,7 @@ const styles = StyleSheet.create({
   bpmField: { flex: 1, gap: 4 },
   bpmLabel: { fontFamily: fonts.bodyBold, fontSize: 14, color: colors.muted },
   input: {
+    borderRadius: radii.control,
     minHeight: HIT,
     borderWidth: 1.5,
     borderColor: colors.line,
@@ -153,6 +154,7 @@ const styles = StyleSheet.create({
   tap: { minHeight: HIT, minWidth: 88, paddingHorizontal: 16 },
   notes: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   chip: {
+    borderRadius: radii.control,
     minHeight: HIT,
     minWidth: HIT + 8,
     paddingHorizontal: 12,

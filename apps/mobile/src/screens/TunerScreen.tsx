@@ -10,7 +10,7 @@ import { useI18n, type TFunction } from "../i18n";
 import { GUITAR_STRINGS, nearestGuitarString } from "../tuner/pitchMath";
 import { usePitchTuner, type TunerRange } from "../tuner/usePitchTuner";
 import type { PitchInputInfo } from "@tonehub/midi-host-android";
-import { colors, fonts, HIT } from "../theme/tokens";
+import { colors, fonts, HIT, radii } from "../theme/tokens";
 
 type TunerMode = "chromatic" | "guitar";
 
@@ -295,6 +295,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.cream,
   },
   stage: {
+    borderRadius: radii.panel,
     gap: 10,
     paddingVertical: 18,
     paddingHorizontal: 14,
@@ -314,6 +315,7 @@ const styles = StyleSheet.create({
   endHotFlat: { color: colors.warn },
   endHotSharp: { color: colors.error },
   track: {
+    borderRadius: radii.pill,
     height: 28,
     backgroundColor: colors.surface2,
     borderWidth: 1,
@@ -377,6 +379,7 @@ const styles = StyleSheet.create({
   centsOk: { color: colors.ok },
   strings: { flexDirection: "row", gap: 6, marginTop: 4 },
   stringPad: {
+    borderRadius: radii.control,
     flex: 1,
     alignItems: "center",
     paddingVertical: 8,
@@ -398,6 +401,7 @@ const styles = StyleSheet.create({
     paddingVertical: 28,
   },
   meterTrack: {
+    borderRadius: radii.pill,
     height: 6,
     backgroundColor: colors.surface2,
     overflow: "hidden",

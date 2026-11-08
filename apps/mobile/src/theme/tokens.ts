@@ -16,8 +16,8 @@ export const colors = {
   /** Desktop --ink-soft */
   inkSoft: "#A9B3C1",
   /** Desktop --mute */
-  muted: "#6D7888",
-  muted2: "#6D7888",
+  muted: "#8995A6",
+  muted2: "#8995A6",
   /** Cards / inputs — desktop --bg-2 */
   cream: "#161B22",
   surface: "#161B22",
@@ -52,8 +52,10 @@ export const space = {
   xxl: 40,
 } as const;
 
-/** Minimum TalkBack / touch target (pt). */
-export const HIT = 44;
+export const radii = { small: 8, control: 12, panel: 16, pill: 999 } as const;
+
+/** Minimum Android touch target (dp). */
+export const HIT = 48;
 
 export const typeScale = {
   body: 16,

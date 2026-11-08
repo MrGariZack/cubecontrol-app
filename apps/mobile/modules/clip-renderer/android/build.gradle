@@ -1,0 +1,18 @@
+plugins {
+  id 'com.android.library'
+  id 'expo-module-gradle-plugin'
+}
+
+android {
+  namespace 'com.tonehub.clips'
+  defaultConfig {
+    versionCode 1
+    versionName '0.0.0'
+  }
+}
+
+dependencies {
+  // Match the Media3 version used by expo-video.
+  implementation 'androidx.media3:media3-transformer:1.9.0'
+  implementation 'androidx.media3:media3-effect:1.9.0'
+}

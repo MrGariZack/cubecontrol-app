@@ -12,7 +12,7 @@ import { compareSlots, type MatchVolumesSource } from "../device/bank";
 import { pickJsonFile, pickWavFile, readUriBytes, readUriText, shareJsonFile, alertFilesError } from "../device/files";
 import { useI18n } from "../i18n";
 import { useApp } from "../store/AppStore";
-import { colors, fonts, HIT } from "../theme/tokens";
+import { colors, fonts, HIT, radii } from "../theme/tokens";
 import { confirmAction } from "../ui/confirm";
 import { confirmIrCabinetWrite } from "../ui/irConfirm";
 
@@ -290,13 +290,14 @@ const styles = StyleSheet.create({
   scroll: { paddingHorizontal: 22, paddingBottom: 28, gap: 16 },
   title: { fontFamily: fonts.display, fontSize: 28, color: colors.ink },
   sub: { fontFamily: fonts.body, fontSize: 16, lineHeight: 24, color: colors.muted, marginTop: -8 },
-  card: { gap: 10, padding: 14, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.line },
+  card: { borderRadius: radii.panel, gap: 10, padding: 14, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.line },
   cardTitle: { fontFamily: fonts.display, fontSize: 20, color: colors.ink },
   copy: { fontFamily: fonts.body, fontSize: 15, lineHeight: 22, color: colors.muted },
   label: { fontFamily: fonts.bodyBold, fontSize: 14, color: colors.ink },
   hint: { fontFamily: fonts.body, fontSize: 14, color: colors.muted, marginTop: -4 },
   cabs: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   cab: {
+    borderRadius: radii.control,
     width: HIT,
     height: HIT,
     alignItems: "center",

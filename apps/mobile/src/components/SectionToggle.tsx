@@ -1,5 +1,5 @@
 import { Pressable, StyleSheet, Text } from "react-native";
-import { colors, fonts, HIT } from "../theme/tokens";
+import { colors, fonts, HIT, radii } from "../theme/tokens";
 
 type Props = {
   readonly label: string;
@@ -33,6 +33,7 @@ export function SectionToggle({ label, on, accent, disabled, onChange }: Props) 
 
 const styles = StyleSheet.create({
   root: {
+    borderRadius: radii.control,
     minHeight: HIT,
     paddingHorizontal: 12,
     flexDirection: "row",

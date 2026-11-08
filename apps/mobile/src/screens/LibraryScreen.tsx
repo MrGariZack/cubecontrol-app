@@ -1,8 +1,8 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { Button } from "../components/Button";
 import { SafetyGate } from "../components/SafetyGate";
 import { SessionBanner } from "../components/SessionBanner";
@@ -26,7 +26,7 @@ import {
   type DelayNoteId,
 } from "../music/delaySync";
 import { useApp } from "../store/AppStore";
-import { colors, fonts, HIT } from "../theme/tokens";
+import { colors, fonts, HIT, radii } from "../theme/tokens";
 import { confirmAction } from "../ui/confirm";
 import { confirmIrCabinetWrite } from "../ui/irConfirm";
 
@@ -46,6 +46,7 @@ function formatDate(iso: string): string {
 export function LibraryScreen() {
   const { t } = useI18n();
   const router = useRouter();
+  const { section: requestedSection } = useLocalSearchParams<{ section?: Section }>();
   const app = useApp();
   const [section, setSection] = useState<Section>("tones");
   const [query, setQuery] = useState("");
@@ -76,7 +77,12 @@ export function LibraryScreen() {
     C: null,
   });
   const [armOpen, setArmOpen] = useState(false);
-  const [showName, setShowName] = useState("");
+  const [showName, setShowName] = useState<string | null>(null);
+  const [showSaving, setShowSaving] = useState(false);
+  const [showSaved, setShowSaved] = useState(false);
+  const [showError, setShowError] = useState<string | null>(null);
+  const showSaveLock = useRef(false);
+  const scroll = useRef<ScrollView>(null);
   const [showGate, setShowGate] = useState(false);
   const [pendingArm, setPendingArm] = useState(false);
   const [pendingIrId, setPendingIrId] = useState<string | null>(null);
@@ -111,6 +117,45 @@ export function LibraryScreen() {
   const selectedSong = app.library.songs.find((s) => s.id === selectedSongId) ?? null;
   const selectedShow =
     app.library.shows.find((s) => s.id === selectedShowId) ?? app.library.shows[0] ?? null;
+
+  useEffect(() => {
+    if (requestedSection === "tones" || requestedSection === "songs" ||
+        requestedSection === "shows" || requestedSection === "more") {
+      setSection(requestedSection);
+      router.setParams({ section: undefined });
+    }
+  }, [requestedSection, router]);
+
+  useEffect(() => {
+    scroll.current?.scrollTo({ y: 0, animated: false });
+  }, [section]);
+
+  function startSongDraft() {
+    const tone = app.library.presets[0];
+    if (!tone) return;
+    setSection("songs");
+    setSongDraft({
+      step: 1, name: t("lib.newSong"), presetId: tone.id, irId: "", notes: "",
+      bpm: "", delayNote: DEFAULT_DELAY_NOTE,
+    });
+  }
+
+  async function saveShowChange(action: () => Promise<void>) {
+    if (showSaveLock.current) return;
+    showSaveLock.current = true;
+    setShowSaving(true);
+    setShowSaved(false);
+    setShowError(null);
+    try {
+      await action();
+      setShowSaved(true);
+    } catch (error) {
+      setShowError(error instanceof Error ? error.message : String(error));
+    } finally {
+      showSaveLock.current = false;
+      setShowSaving(false);
+    }
+  }
 
   async function persistSaveSheet() {
     if (!saveSheet) return;
@@ -266,10 +311,11 @@ export function LibraryScreen() {
   return (
     <SafeAreaView style={styles.safe} edges={["top"]}>
       <StatusBar style="light" />
-      <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
-        <Text style={styles.title} accessibilityRole="header">
-          {t("lib.title")}
-        </Text>
+      <ScrollView ref={scroll} contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
+        <View style={styles.heading}>
+          <Text style={styles.title} accessibilityRole="header">{t("lib.title")}</Text>
+          <Button variant="ghost" label={t("guide.title")} onPress={() => router.push("/help")} />
+        </View>
         <Text style={styles.sub}>{t("lib.subtitle")}</Text>
         {app.connection === null ? <Text style={styles.warn}>{t("lib.offlineHint")}</Text> : null}
         <SessionBanner error={app.error} status={app.status} busy={app.busy} />
@@ -493,17 +539,7 @@ export function LibraryScreen() {
             <Button
               label={t("lib.newSong")}
               disabled={app.busy || app.library.presets.length === 0}
-              onPress={() =>
-                setSongDraft({
-                  step: 1,
-                  name: t("lib.newSong"),
-                  presetId: app.library.presets[0]?.id ?? "",
-                  irId: "",
-                  notes: "",
-                  bpm: "",
-                  delayNote: DEFAULT_DELAY_NOTE,
-                })
-              }
+              onPress={startSongDraft}
             />
 
             {songDraft ? (
@@ -658,9 +694,12 @@ export function LibraryScreen() {
                 onPress={() => {
                   setSelectedShowId(show.id);
                   app.setActiveShow(show.id, 0);
-                  setShowName(show.name);
+                  setShowName(null);
+                  setShowSaved(false);
+                  setShowError(null);
                   setArmOpen(false);
                 }}
+                disabled={showSaving}
                 style={[styles.row, selectedShow?.id === show.id && styles.rowOn]}
               >
                 <Text style={styles.rowTitle}>{show.name}</Text>
@@ -669,14 +708,19 @@ export function LibraryScreen() {
             ))}
             <Button
               label={t("lib.newShow")}
-              onPress={() => {
-                void app.saveShow(t("lib.showNameDefault", { n: app.library.shows.length + 1 })).then((id) => {
+              disabled={showSaving || !app.libraryReady}
+              onPress={() => void saveShowChange(async () => {
+                  const id = await app.saveShow(t("lib.showNameDefault", { n: app.library.shows.length + 1 }));
                   setSelectedShowId(id);
-                  setShowName(t("lib.showNameDefault", { n: app.library.shows.length + 1 }));
+                  setShowName(null);
                   setArmOpen(false);
-                });
-              }}
+              })}
             />
+            {showError || showSaved ? (
+              <Text style={showError ? styles.warn : styles.saved} accessibilityLiveRegion="polite">
+                {showError ?? t("lib.showSaved")}
+              </Text>
+            ) : null}
 
             {selectedShow ? (
               <View style={styles.card}>
@@ -684,14 +728,19 @@ export function LibraryScreen() {
                 <Text style={styles.empty}>{t("lib.showExplain")}</Text>
                 <TextInput
                   accessibilityLabel={t("lib.showName")}
-                  value={showName || selectedShow.name}
+                  value={showName ?? selectedShow.name}
                   onChangeText={setShowName}
-                  onEndEditing={() => {
-                    const name = showName.trim();
-                    if (name) void app.renameShow(selectedShow.id, name);
-                  }}
+                  editable={!showSaving}
                   style={styles.input}
                 />
+                {showName !== null && showName !== selectedShow.name ? (
+                  <Button variant="secondary" label={t("lib.saveShowName")}
+                    disabled={showSaving || !showName.trim()}
+                    onPress={() => void saveShowChange(async () => {
+                      await app.renameShow(selectedShow.id, showName);
+                      setShowName(null);
+                    })} />
+                ) : null}
                 {selectedShow.songIds.map((id, index) => {
                   const song = app.library.songs.find((item) => item.id === id);
                   if (!song) return null;
@@ -703,28 +752,35 @@ export function LibraryScreen() {
                       <Button
                         variant="ghost"
                         label="↑"
-                        disabled={index === 0}
-                        onPress={() => void app.moveSongInShow(selectedShow.id, id, -1)}
+                        disabled={showSaving || index === 0}
+                        onPress={() => void saveShowChange(() => app.moveSongInShow(selectedShow.id, id, -1))}
                         style={styles.tiny}
                       />
                       <Button
                         variant="ghost"
                         label="↓"
-                        disabled={index === selectedShow.songIds.length - 1}
-                        onPress={() => void app.moveSongInShow(selectedShow.id, id, 1)}
+                        disabled={showSaving || index === selectedShow.songIds.length - 1}
+                        onPress={() => void saveShowChange(() => app.moveSongInShow(selectedShow.id, id, 1))}
                         style={styles.tiny}
                       />
                       <Button
                         variant="ghost"
                         label={t("lib.remove")}
-                        onPress={() => void app.removeSongFromShow(selectedShow.id, id)}
+                        disabled={showSaving}
+                        onPress={() => void saveShowChange(() => app.removeSongFromShow(selectedShow.id, id))}
                         style={styles.tiny}
                       />
                     </View>
                   );
                 })}
                 <Text style={styles.label}>{t("lib.addSongToShow")}</Text>
-                {app.library.songs.filter((song) => !selectedShow.songIds.includes(song.id)).length === 0 ? (
+                {app.library.songs.length === 0 ? (
+                  <>
+                    <Text style={styles.empty}>{t(app.library.presets.length ? "lib.showNoSongs" : "lib.showNeedsTone")}</Text>
+                    <Button variant="secondary" label={t(app.library.presets.length ? "lib.newSong" : "lib.tones")}
+                      onPress={app.library.presets.length ? startSongDraft : () => setSection("tones")} />
+                  </>
+                ) : app.library.songs.every((song) => selectedShow.songIds.includes(song.id)) ? (
                   <Text style={styles.empty}>{t("lib.allSongsInShow")}</Text>
                 ) : (
                   app.library.songs
@@ -734,13 +790,14 @@ export function LibraryScreen() {
                         key={song.id}
                         variant="secondary"
                         label={song.name}
-                        onPress={() => void app.addSongToShow(selectedShow.id, song.id)}
+                        disabled={showSaving}
+                        onPress={() => void saveShowChange(() => app.addSongToShow(selectedShow.id, song.id))}
                       />
                     ))
                 )}
                 <Button
                   label={t("lib.stageMode")}
-                  disabled={selectedShow.songIds.length === 0}
+                  disabled={showSaving || selectedShow.songIds.length === 0}
                   onPress={() => {
                     app.setActiveShow(selectedShow.id, 0);
                     router.push("/(tabs)/stage");
@@ -794,6 +851,7 @@ export function LibraryScreen() {
                 <Button
                   variant="ghost"
                   label={t("lib.deleteShow")}
+                  disabled={showSaving}
                   onPress={() => {
                     void confirmAction({
                       title: t("lib.deleteShowTitle"),
@@ -803,7 +861,11 @@ export function LibraryScreen() {
                       destructive: true,
                     }).then((ok) => {
                       if (!ok) return;
-                      void app.deleteShow(selectedShow.id).then(() => setSelectedShowId(null));
+                      void saveShowChange(async () => {
+                        await app.deleteShow(selectedShow.id);
+                        setSelectedShowId(null);
+                        setShowName(null);
+                      });
                     });
                   }}
                 />
@@ -856,7 +918,7 @@ export function LibraryScreen() {
             ))}
             <Text style={styles.empty}>{t("share.packsHint")}</Text>
             <Button label={t("share.importFile")} onPress={() => void importShareFile()} />
-            <Button label={t("lib.importPack")} onPress={() => void importShareFile()} />
+            <Button variant="secondary" label={t("clips.title")} onPress={() => router.push("/clips")} />
           </View>
         ) : null}
       </ScrollView>
@@ -868,6 +930,7 @@ const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.bg },
   scroll: { paddingHorizontal: 22, paddingBottom: 28, gap: 14 },
   title: { fontFamily: fonts.display, fontSize: 28, color: colors.ink },
+  heading: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", justifyContent: "space-between", gap: 8 },
   sub: { fontFamily: fonts.body, fontSize: 16, lineHeight: 24, color: colors.muted, marginTop: -6 },
   segs: { flexDirection: "row", gap: 6 },
   seg: {
@@ -876,7 +939,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1.5,
-    borderColor: colors.green,
+    borderColor: colors.line,
+    borderRadius: radii.control,
     paddingHorizontal: 4,
   },
   segOn: { backgroundColor: colors.green },
@@ -885,12 +949,13 @@ const styles = StyleSheet.create({
   block: { gap: 10 },
   empty: { fontFamily: fonts.body, fontSize: 16, lineHeight: 24, color: colors.muted },
   label: { fontFamily: fonts.bodyBold, fontSize: 16, color: colors.ink },
-  row: { paddingVertical: 12, paddingHorizontal: 12, backgroundColor: colors.surface, minHeight: HIT },
+  row: { paddingVertical: 12, paddingHorizontal: 12, backgroundColor: colors.surface, minHeight: HIT, borderRadius: radii.control },
   rowOn: { backgroundColor: colors.greenMuted },
   rowTitle: { fontFamily: fonts.bodyBold, fontSize: 16, color: colors.ink },
   rowMeta: { fontFamily: fonts.body, fontSize: 16, color: colors.muted, marginTop: 2 },
   warn: { fontFamily: fonts.body, fontSize: 14, lineHeight: 20, color: colors.warn, marginTop: 8 },
   input: {
+    borderRadius: radii.control,
     minHeight: HIT,
     borderWidth: 1.5,
     borderColor: colors.line,
@@ -902,7 +967,8 @@ const styles = StyleSheet.create({
   },
   chips: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   chip: {
-    minHeight: HIT - 8,
+    minHeight: HIT,
+    borderRadius: radii.pill,
     paddingHorizontal: 12,
     justifyContent: "center",
     borderWidth: 1.5,
@@ -921,12 +987,14 @@ const styles = StyleSheet.create({
   },
   showSongText: { flex: 1 },
   tiny: { minWidth: HIT },
-  card: { gap: 10, padding: 12, backgroundColor: colors.surface },
+  card: { gap: 10, padding: 12, backgroundColor: colors.surface, borderRadius: radii.panel },
+  saved: { fontFamily: fonts.body, fontSize: 14, color: colors.ok },
   cardTitle: { fontFamily: fonts.display, fontSize: 20, color: colors.ink },
   armRow: { gap: 6 },
   armSongs: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   cabs: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   cab: {
+    borderRadius: radii.control,
     width: HIT,
     height: HIT,
     alignItems: "center",
