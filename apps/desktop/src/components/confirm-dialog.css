@@ -17,7 +17,7 @@
   flex-direction: column;
   gap: 12px;
   padding: 28px 28px 22px;
-  border-radius: 16px;
+  border-radius: var(--radius-panel);
   border: 1px solid var(--line);
   background:
     linear-gradient(165deg, rgba(28, 34, 42, 0.98), rgba(12, 14, 18, 0.99));
@@ -68,7 +68,7 @@
 .cc-confirm__detail {
   margin: 0;
   padding: 12px 14px;
-  border-radius: 10px;
+  border-radius: var(--radius-control);
   background: rgba(0, 0, 0, 0.28);
   border: 1px solid rgba(255, 255, 255, 0.06);
   font-size: 13px;
@@ -96,7 +96,7 @@
   font-size: 16px;
   letter-spacing: 0.06em;
   padding: 10px 12px;
-  border-radius: 8px;
+  border-radius: var(--radius-control);
   border: 1px solid rgba(239, 139, 126, 0.35);
   background: rgba(0, 0, 0, 0.35);
   color: var(--ink, #eef2f6);
@@ -118,7 +118,7 @@
 .cc-confirm__btn {
   min-height: 40px;
   padding: 0 16px;
-  border-radius: 10px;
+  border-radius: var(--radius-control);
   border: 1px solid var(--line);
   background: transparent;
   color: var(--ink, #eef2f6);

@@ -104,7 +104,7 @@ jobs:
             - Enable install from unknown sources
             - Same GitHub signing key is required for in-place updates
 
-            Prefer **Cabinet 8** for new IRs. Close CubeSuite before connecting.
+            IR uploads overwrite the selected cabinet. Close CubeSuite before connecting.
 
             See [SAFETY.md](https://github.com/MrGariZack/cubecontrol-app/blob/master/apps/desktop/SAFETY.md) and [RELEASE.md](https://github.com/MrGariZack/cubecontrol-app/blob/master/apps/desktop/RELEASE.md).
         env:

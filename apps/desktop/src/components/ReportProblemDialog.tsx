@@ -104,7 +104,12 @@ export function ReportProblemDialog({ onClose }: ReportProblemDialogProps) {
 
   async function onReveal() {
     if (lastZip === null) return;
-    await window.tonehubDesktop.diagnostics.revealInFolder(lastZip);
+    setError(null);
+    try {
+      await window.tonehubDesktop.diagnostics.revealInFolder(lastZip);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    }
   }
 
   return (

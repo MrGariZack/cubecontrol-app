@@ -25,6 +25,7 @@ export function StageScreen() {
     applySong,
     assignSongToSlot,
     loadIrWav,
+    irCabinet,
     connection,
   } = useApp();
 
@@ -43,9 +44,9 @@ export function StageScreen() {
       const song = ordered[index];
       if (!song || busy || connection === null) return;
       setSongIndex(index);
-      await applySongMaybeIr(t, song, library, { applySong, loadIrWav });
+      await applySongMaybeIr(t, song, library, { applySong, loadIrWav, irCabinet });
     },
-    [applySong, busy, connection, library, loadIrWav, ordered, setSongIndex, t],
+    [applySong, busy, connection, irCabinet, library, loadIrWav, ordered, setSongIndex, t],
   );
 
   const goToRef = useRef(goTo);
@@ -125,7 +126,7 @@ export function StageScreen() {
             variant="stagePrimary"
             label={t("stage.applyLive")}
             disabled={busy || !current || connection === null}
-            onPress={() => current && void applySongMaybeIr(t, current, library, { applySong, loadIrWav })}
+            onPress={() => current && void applySongMaybeIr(t, current, library, { applySong, loadIrWav, irCabinet })}
             style={styles.ctrl}
           />
           <View style={styles.feet}>

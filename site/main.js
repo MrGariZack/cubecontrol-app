@@ -6,24 +6,24 @@ const copy = {
     "nav.download": "Download",
     "hero.title": "Open control for the CUBE Baby.",
     "hero.lede":
-      "Unofficial desktop editor with real setlists, live A/B/C editing, and Cab 8 IR tools — built on an open MIDI core.",
+      "Unofficial desktop editor with real setlists, live A/B/C editing, and IR tools — built on an open MIDI core.",
     "cta.download": "Download for Windows",
     "cta.github": "View on GitHub",
     "feat.library.title": "Shows that survive the gig",
     "feat.library.copy":
       "Build presets, songs, and ordered setlists in the library — then take them to Stage without digging through bank slots.",
-    "feat.device.title": "IR distance & Cab 8",
+    "feat.device.title": "IR distance",
     "feat.device.copy":
-      "Device tools for bank export/import and MIC DIST on Cabinet 8 — the safer slot for custom IRs.",
-    "safety.title": "Experimental. Prefer Cab 8.",
+      "Device tools for bank export/import and MIC DIST for custom IRs.",
+    "safety.title": "IR writes overwrite the selected cabinet.",
     "safety.copy":
-      "CubeControl is not affiliated with M-VAVE or Cuvave. USB writes can brick factory IRs outside Cab 8 — export your bank first, and treat every write as experimental.",
+      "CubeControl is not affiliated with M-VAVE or Cuvave. Back up your bank before experimenting. IR uploads replace the content of the selected cabinet.",
     "safety.link": "Read SAFETY.md",
     "oss.title": "Open where it matters",
     "oss.copy":
       "App and hardware protocol are MIT. Report bugs from the app or open an issue — we want real USB capture notes.",
     "foot.mark": "CubeControl · unofficial CUBE Baby editor",
-    "foot.meta": "v0.1.3 · Windows NSIS + portable",
+    "foot.meta": "v0.1.4 · Windows NSIS + portable",
   },
   es: {
     brand: "CubeControl",
@@ -32,24 +32,24 @@ const copy = {
     "nav.download": "Descargar",
     "hero.title": "Control abierto para el CUBE Baby.",
     "hero.lede":
-      "Editor de escritorio no oficial con setlists reales, edición A/B/C en vivo y herramientas IR en Cab 8 — sobre un núcleo MIDI abierto.",
+      "Editor de escritorio no oficial con setlists reales, edición A/B/C en vivo y herramientas de IR — sobre un núcleo MIDI abierto.",
     "cta.download": "Descargar para Windows",
     "cta.github": "Ver en GitHub",
     "feat.library.title": "Shows que aguantan el bolo",
     "feat.library.copy":
       "Arma presets, canciones y setlists ordenados en la biblioteca — y llévalos a Stage sin pelearte con el bank.",
-    "feat.device.title": "Distancia IR y Cab 8",
+    "feat.device.title": "Distancia IR",
     "feat.device.copy":
-      "Herramientas Device para exportar/importar bank y MIC DIST en Cabinet 8 — el slot más seguro para IRs custom.",
-    "safety.title": "Experimental. Prefiere Cab 8.",
+      "Herramientas Device para exportar/importar bank y MIC DIST para IR personalizados.",
+    "safety.title": "Las cargas de IR sobrescriben el gabinete seleccionado.",
     "safety.copy":
-      "CubeControl no está afiliado a M-VAVE ni Cuvave. Las escrituras USB pueden dañar IRs de fábrica fuera de Cab 8 — exporta el bank primero y trata cada write como experimental.",
+      "CubeControl no está afiliado a M-VAVE ni Cuvave. Exporta el banco antes de experimentar. La carga de IR reemplaza el contenido del gabinete seleccionado.",
     "safety.link": "Leer SAFETY.md",
     "oss.title": "Abierto donde importa",
     "oss.copy":
       "App y protocolo de hardware son MIT. Reporta bugs desde la app o abre un issue — queremos notas reales de capturas USB.",
     "foot.mark": "CubeControl · editor no oficial del CUBE Baby",
-    "foot.meta": "v0.1.3 · Windows NSIS + portable",
+    "foot.meta": "v0.1.4 · Windows NSIS + portable",
   },
 };
 

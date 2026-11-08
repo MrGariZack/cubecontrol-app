@@ -44,15 +44,19 @@
 
 .lib-ws__nav {
   display: flex;
-  gap: 8px;
+  gap: 4px;
   flex-wrap: wrap;
+  padding: 4px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-panel);
+  background: var(--bg-1);
 }
 
 .lib-ws__nav-btn {
   min-height: 44px;
   padding: 10px 18px;
-  border-radius: 8px;
-  border: 1px solid var(--line);
+  border-radius: var(--radius-control);
+  border: 1px solid transparent;
   background: transparent;
   color: var(--ink-soft);
   font-size: 14px;
@@ -76,7 +80,7 @@
 .lib-ws__ghost:focus-visible,
 .lib-ws__chip:focus-visible,
 .lib-ws__danger:focus-visible {
-  outline: 2px solid rgba(196, 165, 116, 0.85);
+  outline: 2px solid var(--focus-ring);
   outline-offset: 2px;
 }
 
@@ -94,7 +98,7 @@
   gap: 12px;
   min-height: 420px;
   padding: 16px;
-  border-radius: 12px;
+  border-radius: var(--radius-panel);
   border: 1px solid var(--line);
   background: rgba(14, 17, 22, 0.85);
 }
@@ -107,7 +111,7 @@
   width: 100%;
   min-height: 48px;
   padding: 12px 14px;
-  border-radius: 8px;
+  border-radius: var(--radius-control);
   border: 1px solid var(--line);
   background: var(--bg-1);
   color: var(--ink);
@@ -124,7 +128,7 @@
 .lib-ws__chip {
   min-height: 36px;
   padding: 6px 12px;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   border: 1px solid var(--line);
   background: transparent;
   color: var(--mute);
@@ -153,7 +157,7 @@
   width: 100%;
   min-height: 56px;
   padding: 12px 14px;
-  border-radius: 10px;
+  border-radius: var(--radius-control);
   border: 1px solid transparent;
   background: transparent;
   color: inherit;
@@ -203,7 +207,7 @@
 .lib-ws__danger {
   min-height: 48px;
   padding: 12px 18px;
-  border-radius: 10px;
+  border-radius: var(--radius-control);
   font-size: 14px;
   font-weight: 700;
   border: 1px solid var(--line);
@@ -225,6 +229,12 @@
   color: var(--ink-soft);
 }
 
+.lib-ws__primary:hover:not(:disabled),
+.lib-ws__ghost:hover:not(:disabled) {
+  border-color: var(--accent);
+  color: var(--ink);
+}
+
 .lib-ws__danger {
   background: transparent;
   border-color: rgba(239, 139, 126, 0.35);
@@ -240,7 +250,6 @@
 
 .lib-ws__detail {
   min-height: 420px;
-  padding: 8px;
 }
 
 .lib-ws__detail--solo {
@@ -249,11 +258,9 @@
 
 .lib-ws__detail-card {
   padding: 28px;
-  border-radius: 14px;
+  border-radius: var(--radius-panel);
   border: 1px solid var(--line);
-  background:
-    linear-gradient(160deg, rgba(22, 27, 34, 0.95), rgba(10, 12, 16, 0.98));
-  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.35);
+  background: var(--bg-1);
 }
 
 .lib-ws__detail-card--wide {
@@ -338,7 +345,7 @@
   gap: 10px;
   min-height: 56px;
   padding: 8px 12px;
-  border-radius: 10px;
+  border-radius: var(--radius-control);
   border: 1px solid var(--line);
   background: rgba(0, 0, 0, 0.2);
 }
@@ -377,7 +384,7 @@
 .lib-ws__cue-remove {
   min-height: 40px;
   padding: 8px 12px;
-  border-radius: 8px;
+  border-radius: var(--radius-control);
   border: 1px solid transparent;
   background: transparent;
   color: var(--mute);
@@ -412,7 +419,7 @@
   flex-direction: column;
   gap: 10px;
   padding: 18px;
-  border-radius: 12px;
+  border-radius: var(--radius-control);
   border: 1px solid var(--line);
   background: rgba(0, 0, 0, 0.25);
   font-size: 13px;
@@ -458,7 +465,7 @@
 .lib-ws__sheet-card {
   width: min(420px, 100%);
   padding: 28px;
-  border-radius: 14px;
+  border-radius: var(--radius-panel);
   border: 1px solid var(--line);
   background: var(--bg-1);
   box-shadow: 0 24px 60px rgba(0, 0, 0, 0.5);

@@ -13,6 +13,7 @@ import type { LiveParamsSnapshot } from "../types/device";
 import { MicDistanceRail } from "./cube-baby/MicDistanceRail";
 import { DEFAULT_DELAY_NOTE, DELAY_NOTE_IDS, clampBpm, isDelayNoteId, type DelayNoteId } from "../music/delaySync";
 import { useConfirmDialog } from "../hooks/useConfirmDialog";
+import { useGuide } from "../help/Guide";
 import { useI18n } from "../i18n";
 import "./library-workspace.css";
 
@@ -20,8 +21,10 @@ export type LibrarySection = "tones" | "songs" | "shows" | "more";
 
 type LibraryWorkspaceProps = {
   readonly busy: boolean;
+  readonly hasPedal: boolean;
   readonly liveParams: LiveParamsSnapshot;
   readonly irCabinet: number;
+  readonly onIrCabinetChange: (cabinet: number) => void;
   readonly irDistance: number;
   readonly activeShowId: string | null;
   readonly activeSongIndex: number;
@@ -89,8 +92,10 @@ type SaveSheet = {
 export function LibraryWorkspace(props: LibraryWorkspaceProps) {
   const {
     busy,
+    hasPedal,
     liveParams,
     irCabinet,
+    onIrCabinetChange,
     irDistance,
     activeShowId,
     activeSongIndex,
@@ -108,6 +113,7 @@ export function LibraryWorkspace(props: LibraryWorkspaceProps) {
   } = props;
 
   const { t } = useI18n();
+  const { request: guide } = useGuide();
   const { confirm, dialog: confirmDialog } = useConfirmDialog();
   const profileLabel = (p: LibraryProfile) => t(`lib.profile.${p}`);
   const [section, setSection] = useState<LibrarySection>("tones");
@@ -138,6 +144,16 @@ export function LibraryWorkspace(props: LibraryWorkspaceProps) {
   const [moreTab, setMoreTab] = useState<"irs" | "backups" | "export">("irs");
   const [grooveBpm, setGrooveBpm] = useState<number | "">("");
   const [grooveNote, setGrooveNote] = useState<DelayNoteId>(DEFAULT_DELAY_NOTE);
+
+  useEffect(() => {
+    const page = guide?.step.page;
+    if (page === "tones" || page === "songs" || page === "shows" || page === "stage") {
+      setSection(page === "stage" ? "shows" : page);
+    } else if (page === "irs" || page === "backups" || page === "packs") {
+      setSection("more");
+      setMoreTab(page === "packs" ? "export" : page);
+    }
+  }, [guide]);
 
   const refresh = useCallback(async () => {
     const next = await window.tonehubDesktop.library.list();
@@ -208,6 +224,7 @@ export function LibraryWorkspace(props: LibraryWorkspaceProps) {
   }
 
   async function persistPreset(sheet: SaveSheet) {
+    if (!hasPedal) return;
     await runBusy(async () => {
       const tags = sheet.tags
         .split(",")
@@ -265,7 +282,7 @@ export function LibraryWorkspace(props: LibraryWorkspaceProps) {
         name: songDraft.name,
         notes: songDraft.notes,
         presetId: songDraft.presetId,
-        ...(songDraft.irId ? { irId: songDraft.irId, irCabinet, irDistance } : {}),
+        ...(songDraft.irId ? { irId: songDraft.irId, ...(irCabinet ? { irCabinet } : {}), irDistance } : {}),
         ...(songDraft.bpm === "" ? {} : { bpm: clampBpm(songDraft.bpm) }),
         delayNote: songDraft.delayNote,
         ...(songDraft.id ? { id: songDraft.id } : {}),
@@ -403,26 +420,24 @@ export function LibraryWorkspace(props: LibraryWorkspaceProps) {
   }
 
   async function loadIr(item: IrLibraryItem) {
-    if (irCabinet !== 8) {
-      const ok = await confirm({
-        title: t("lib.irLoadTitle", { name: item.name, cab: irCabinet }),
-        body: t("lib.irLoadBody"),
-        tone: "danger",
-        confirmLabel: t("common.follow"),
-      });
-      if (!ok) return;
-      const ok2 = await confirm({
-        title: t("lib.irLastTitle"),
-        body: t("lib.irLastBody", { cab: irCabinet }),
-        tone: "danger",
-        requireTyped: `CAB${irCabinet}`,
-        confirmLabel: t("lib.irWrite"),
-      });
-      if (!ok2) return;
-    }
+    const ok = await confirm({
+      title: t("lib.irLoadTitle", { name: item.name, cab: irCabinet }),
+      body: t("lib.irLoadBody"),
+      tone: "danger",
+      confirmLabel: t("common.follow"),
+    });
+    if (!ok) return;
+    const ok2 = await confirm({
+      title: t("lib.irLastTitle"),
+      body: t("lib.irLastBody", { cab: irCabinet }),
+      tone: "danger",
+      requireTyped: `CAB${irCabinet}`,
+      confirmLabel: t("lib.irWrite"),
+    });
+    if (!ok2) return;
     await runBusy(async () => {
       const result = await window.tonehubDesktop.library.loadIrToPedal(item.id, irCabinet, {
-        confirmFactoryIrOverwrite: irCabinet !== 8,
+        confirmIrOverwrite: true,
         distance: irDistance,
       });
       onCabinetApplied(result.cabinet);
@@ -465,6 +480,8 @@ export function LibraryWorkspace(props: LibraryWorkspaceProps) {
               key={id}
               type="button"
               className={section === id ? "lib-ws__nav-btn is-active" : "lib-ws__nav-btn"}
+              data-guide={id === "tones" ? "tone-find" : id === "songs" ? "song-play" : id === "shows" ? "show-build stage-open stage-actions" : undefined}
+              aria-current={section === id ? "page" : undefined}
               onClick={() => setSection(id)}
             >
               {label}
@@ -537,10 +554,10 @@ export function LibraryWorkspace(props: LibraryWorkspaceProps) {
                 ) : null}
               </ul>
               <div className="lib-ws__list-actions">
-                <button
+                <button data-guide="tone-save"
                   type="button"
                   className="lib-ws__primary"
-                  disabled={busy}
+                  disabled={busy || !hasPedal}
                   onClick={() =>
                     setSaveSheet({
                       mode: "new",
@@ -569,7 +586,7 @@ export function LibraryWorkspace(props: LibraryWorkspaceProps) {
                     <button
                       type="button"
                       className="lib-ws__primary lib-ws__primary--lg"
-                      disabled={busy}
+                      disabled={busy || !hasPedal}
                       onClick={() =>
                         void onApplyPreset(
                           selectedPreset.params,
@@ -590,7 +607,7 @@ export function LibraryWorkspace(props: LibraryWorkspaceProps) {
                     <button
                       type="button"
                       className="lib-ws__ghost"
-                      disabled={busy}
+                      disabled={busy || !hasPedal}
                       onClick={() =>
                         setSaveSheet({
                           mode: "update",
@@ -677,7 +694,7 @@ export function LibraryWorkspace(props: LibraryWorkspaceProps) {
                 ) : null}
               </ul>
               <div className="lib-ws__list-actions">
-                <button
+                <button data-guide="song-create"
                   type="button"
                   className="lib-ws__primary"
                   disabled={busy || index.presets.length === 0}
@@ -933,7 +950,7 @@ export function LibraryWorkspace(props: LibraryWorkspaceProps) {
                     <button
                       type="button"
                       className="lib-ws__primary lib-ws__primary--lg"
-                      disabled={busy}
+                      disabled={busy || !hasPedal}
                       onClick={() => void onApplySong(selectedSong)}
                     >
                       {t("lib.applySong")}
@@ -941,7 +958,7 @@ export function LibraryWorkspace(props: LibraryWorkspaceProps) {
                     <button
                       type="button"
                       className="lib-ws__ghost"
-                      disabled={busy}
+                      disabled={busy || !hasPedal}
                       onClick={() => void onAssignSongToSlot(selectedSong, "A")}
                     >
                       → Foot A
@@ -949,7 +966,7 @@ export function LibraryWorkspace(props: LibraryWorkspaceProps) {
                     <button
                       type="button"
                       className="lib-ws__ghost"
-                      disabled={busy}
+                      disabled={busy || !hasPedal}
                       onClick={() => void onAssignSongToSlot(selectedSong, "B")}
                     >
                       → Foot B
@@ -957,7 +974,7 @@ export function LibraryWorkspace(props: LibraryWorkspaceProps) {
                     <button
                       type="button"
                       className="lib-ws__ghost"
-                      disabled={busy}
+                      disabled={busy || !hasPedal}
                       onClick={() => void onAssignSongToSlot(selectedSong, "C")}
                     >
                       → Foot C
@@ -1112,10 +1129,10 @@ export function LibraryWorkspace(props: LibraryWorkspaceProps) {
                       >
                         {t("lib.stageMode")}
                       </button>
-                      <button
+                      <button data-guide="show-bank"
                         type="button"
                         className="lib-ws__ghost"
-                        disabled={busy || selectedShow.songIds.length === 0}
+                        disabled={busy || !hasPedal || selectedShow.songIds.length === 0}
                         onClick={() => {
                           setArmSlots({
                             A: selectedShow.songIds[0] ?? null,
@@ -1147,7 +1164,7 @@ export function LibraryWorkspace(props: LibraryWorkspaceProps) {
                       >
                         {t("share.action")}
                       </button>
-                      <button
+                      <button data-guide="show-export"
                         type="button"
                         className="lib-ws__ghost"
                         disabled={busy}
@@ -1185,7 +1202,7 @@ export function LibraryWorkspace(props: LibraryWorkspaceProps) {
                           <button
                             type="button"
                             className="lib-ws__cue-title"
-                            disabled={busy || !song}
+                            disabled={busy || !hasPedal || !song}
                             onClick={() => {
                               onActiveShowChange(selectedShow.id, i);
                               if (song) void onApplySong(song);
@@ -1270,7 +1287,20 @@ export function LibraryWorkspace(props: LibraryWorkspaceProps) {
             </div>
             {moreTab === "irs" ? (
               <div className="lib-ws__detail-card">
-                <h2 className="lib-ws__detail-title">{t("device.ir.title")}</h2>
+                <h2 className="lib-ws__detail-title" data-guide="irs">{t("device.ir.title")}</h2>
+                <label className="lib-ws__field">
+                  <span>{t("device.ir.cabinet")}</span>
+                  <select
+                    value={irCabinet}
+                    disabled={busy}
+                    onChange={(event) => onIrCabinetChange(Number(event.target.value))}
+                  >
+                    <option value={0} disabled>{t("studio.pickCab")}</option>
+                    {Array.from({ length: 8 }, (_, index) => index + 1).map((cabinet) => (
+                      <option key={cabinet} value={cabinet}>Cab {cabinet}</option>
+                    ))}
+                  </select>
+                </label>
                 <MicDistanceRail
                   compact
                   value={irDistance}
@@ -1294,10 +1324,10 @@ export function LibraryWorkspace(props: LibraryWorkspaceProps) {
                       <button
                         type="button"
                         className="lib-ws__ghost"
-                        disabled={busy}
+                        disabled={busy || !hasPedal || irCabinet === 0}
                         onClick={() => void loadIr(ir)}
                       >
-                        {t("lib.toPedalCab", { cab: irCabinet })}
+                        {irCabinet ? t("lib.toPedalCab", { cab: irCabinet }) : t("device.ir.load")}
                       </button>
                       <button
                         type="button"
@@ -1319,7 +1349,7 @@ export function LibraryWorkspace(props: LibraryWorkspaceProps) {
             ) : null}
             {moreTab === "backups" ? (
               <div className="lib-ws__detail-card">
-                <h2 className="lib-ws__detail-title">{t("lib.backups")}</h2>
+                <h2 className="lib-ws__detail-title" data-guide="ir-backups">{t("lib.backups")}</h2>
                 <ul className="lib-ws__rows lib-ws__rows--flat">
                   {index.irBackups.map((b) => (
                     <li key={b.id} className="lib-ws__flat-row">
@@ -1330,7 +1360,7 @@ export function LibraryWorkspace(props: LibraryWorkspaceProps) {
                       <button
                         type="button"
                         className="lib-ws__ghost"
-                        disabled={busy}
+                        disabled={busy || !hasPedal}
                         onClick={() =>
                           void runBusy(async () => {
                             const ok = await confirm({
@@ -1363,15 +1393,14 @@ export function LibraryWorkspace(props: LibraryWorkspaceProps) {
             ) : null}
             {moreTab === "export" ? (
               <div className="lib-ws__detail-card">
-                <h2 className="lib-ws__detail-title">{t("lib.packs")}</h2>
+                <h2 className="lib-ws__detail-title" data-guide="packs">{t("lib.packs")}</h2>
                 <p className="lib-ws__detail-meta">{t("share.packsHint")}</p>
                 <button
                   type="button"
                   className="lib-ws__primary"
                   disabled={busy}
                   onClick={() =>
-                    void (async () => {
-                      onError(null);
+                    void runBusy(async () => {
                       const inspect = await window.tonehubDesktop.library.inspectShare();
                       if (!inspect) {
                         onStatus(t("common.cancelled"));
@@ -1391,46 +1420,27 @@ export function LibraryWorkspace(props: LibraryWorkspaceProps) {
                         confirmLabel: t("share.load"),
                       });
                       if (!ok) return;
-                      await runBusy(async () => {
-                        if (inspect.kind === "pack") {
-                          const pack = await window.tonehubDesktop.library.importPackPath(
-                            inspect.path,
-                          );
-                          onStatus(t("lib.packImported", { name: pack.name }));
-                          return;
-                        }
-                        const result = await window.tonehubDesktop.library.importShare(
-                          inspect.payload,
+                      if (inspect.kind === "pack") {
+                        const pack = await window.tonehubDesktop.library.importPackPath(
+                          inspect.path,
                         );
-                        onStatus(
-                          t("share.imported", {
-                            name: result.name,
-                            presets: result.presets,
-                            songs: result.songs,
-                          }),
-                        );
-                      });
-                    })()
-                  }
-                >
-                  {t("share.importFile")}
-                </button>
-                <button
-                  type="button"
-                  className="lib-ws__ghost"
-                  disabled={busy}
-                  onClick={() =>
-                    void runBusy(async () => {
-                      const result = await window.tonehubDesktop.library.importPack();
+                        onStatus(t("lib.packImported", { name: pack.name }));
+                        return;
+                      }
+                      const result = await window.tonehubDesktop.library.importShare(
+                        inspect.payload,
+                      );
                       onStatus(
-                        result
-                          ? t("lib.packImported", { name: result.pack.name })
-                          : t("common.cancelled"),
+                        t("share.imported", {
+                          name: result.name,
+                          presets: result.presets,
+                          songs: result.songs,
+                        }),
                       );
                     })
                   }
                 >
-                  {t("lib.importPack")}
+                  {t("share.importFile")}
                 </button>
                 <ul className="lib-ws__rows lib-ws__rows--flat">
                   {index.packs.map((pack) => (

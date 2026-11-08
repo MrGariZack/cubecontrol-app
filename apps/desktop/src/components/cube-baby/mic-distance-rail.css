@@ -72,7 +72,7 @@
 .mic-dist__stage {
   position: relative;
   height: 56px;
-  border-radius: 6px;
+  border-radius: var(--radius-small);
   border: 1px solid rgba(255, 255, 255, 0.08);
   background:
     linear-gradient(180deg, rgba(28, 24, 20, 0.95) 0%, rgba(8, 9, 10, 0.98) 100%);

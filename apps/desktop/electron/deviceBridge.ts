@@ -108,6 +108,29 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+function cubeBabyRank(port: MidiPort): number {
+  const match = classifyCubeBabyPort(port);
+  if (match === "confirmed") return 2;
+  if (match === "candidate") return 1;
+  return 0;
+}
+
+/** Prefer VID/PID, then a SINCO / Cube Baby name. Needs both directions. */
+function pickCubeBabyPair(
+  ports: readonly MidiPort[],
+): { input: MidiPort; output: MidiPort } | undefined {
+  const best = (direction: MidiPort["direction"]): MidiPort | undefined =>
+    ports
+      .filter((port) => port.direction === direction)
+      .slice()
+      .sort((a, b) => cubeBabyRank(b) - cubeBabyRank(a))
+      .find((port) => cubeBabyRank(port) > 0);
+  const input = best("input");
+  const output = best("output");
+  if (input === undefined || output === undefined) return undefined;
+  return { input, output };
+}
+
 function isMidiTransportFault(error: unknown): boolean {
   const message = error instanceof Error ? error.message : String(error);
   return /rtmidi|MidiOutWinMM|WinMM|sysex|MIDI WinMM/i.test(message);
@@ -284,21 +307,57 @@ export class DeviceBridge {
     return ports.map((port) => this.#toPortInfo(port));
   }
 
+  /**
+   * Fires when a MIDI cable is plugged or unplugged. The transport polls
+   * about once a second. If the open CUBE Baby disappears, the session is
+   * closed before the listener runs.
+   */
+  watchPorts(listener: (event: { readonly sessionLost: boolean }) => void): () => void {
+    let unsubscribe = () => {};
+    let stopped = false;
+    let chain: Promise<void> = Promise.resolve();
+    void this.#ensureTransport().then((transport) => {
+      if (stopped) return;
+      unsubscribe = transport.onPortsChanged(() => {
+        chain = chain.then(async () => {
+          if (stopped) return;
+          const present = pickCubeBabyPair(await transport.listPorts()) !== undefined;
+          const sessionLost = this.#session !== undefined && !present;
+          if (sessionLost) await this.disconnect();
+          if (!stopped) listener({ sessionLost });
+        });
+      });
+    });
+    return () => {
+      stopped = true;
+      unsubscribe();
+    };
+  }
+
+  #connectTail: Promise<unknown> = Promise.resolve();
+
   async connect(): Promise<DesktopConnectionInfo> {
+    const run = this.#connectTail.then(
+      () => this.#connectOnce(),
+      () => this.#connectOnce(),
+    );
+    this.#connectTail = run.then(
+      () => undefined,
+      () => undefined,
+    );
+    return run;
+  }
+
+  async #connectOnce(): Promise<DesktopConnectionInfo> {
     await this.disconnect();
     const transport = await this.#ensureTransport();
-    const ports = await transport.listPorts();
-    const input = ports.find(
-      (port) => port.direction === "input" && classifyCubeBabyPort(port) === "confirmed",
-    );
-    const output = ports.find(
-      (port) => port.direction === "output" && classifyCubeBabyPort(port) === "confirmed",
-    );
-    if (input === undefined || output === undefined) {
+    const pair = pickCubeBabyPair(await transport.listPorts());
+    if (pair === undefined) {
       throw new Error(
-        "No se encontró CUBE Baby USB (VID/PID confirmado). Cierra CubeSuite y reconecta el cable.",
+        "No se encontró CUBE Baby USB. Cierra CubeSuite y conecta el cable.",
       );
     }
+    const { input, output } = pair;
 
     const session = await CubeBabySession.open(transport, {
       inputPortId: input.id,
@@ -505,18 +564,29 @@ export class DeviceBridge {
     return dumped.data.slice();
   }
 
-  async persistIrRomSector(slotIndex: number, sector: Uint8Array): Promise<boolean> {
-    const session = this.#requireSession();
+  async restoreIrRomSector(
+    slotIndex: number,
+    sector: Uint8Array,
+    saveBackup: (data: Uint8Array) => Promise<unknown>,
+  ): Promise<void> {
     if (!Number.isInteger(slotIndex) || slotIndex < 0 || slotIndex > 7) {
       throw new Error("slotIndex must be 0..7");
     }
-    const result = await session.persistIrRom({
-      payload: sector,
-      slotIndex,
-      padSector: true,
-      timeoutMs: 8_000,
+    await this.#serialMidi(async () => {
+      const session = this.#requireSession();
+      const previous = await session.dumpIrRom({ slotIndex, timeoutMs: 5_000 });
+      await saveBackup(previous.data);
+      const result = await session.persistIrRom({
+        payload: sector,
+        slotIndex,
+        padSector: true,
+        timeoutMs: 8_000,
+      });
+      if (!result.verified) {
+        throw new Error("No se pudo verificar el IR restaurado. No se seleccionó el gabinete.");
+      }
+      await session.selectCabinet({ cabinet: slotIndex + 1, timeoutMs: LIVE_ACK_TIMEOUT_MS });
     });
-    return result.verified;
   }
 
   /**
@@ -663,23 +733,22 @@ export class DeviceBridge {
   async loadIrFromWav(
     wav: Uint8Array,
     cabinet: number,
-    options?: {
-      readonly confirmFactoryIrOverwrite?: boolean;
+    saveBackup: (data: Uint8Array) => Promise<unknown>,
+    options: {
+      readonly confirmIrOverwrite?: boolean;
       /** CubeSuite Distance — float 0..1 (ROM volume + live 0x768 header). */
       readonly distance?: number;
     },
   ): Promise<LoadIrResult> {
-    const session = this.#requireSession();
     if (wav.byteLength < 44) {
       throw new Error("WAV demasiado corto");
     }
     if (!Number.isInteger(cabinet) || cabinet < 1 || cabinet > 8) {
       throw new Error("cabinet IR target must be 1..8");
     }
-    // Cab 1–7 often hold factory IRs — require an explicit UI confirmation token.
-    if (cabinet !== 8 && options?.confirmFactoryIrOverwrite !== true) {
+    if (options?.confirmIrOverwrite !== true) {
       throw new Error(
-        "Escritura a Cab 1–7 bloqueada: confirma explícitamente el riesgo de pisar IR de fábrica (usa Cab 8 si puedes).",
+        "Confirma la sobrescritura del IR en el gabinete seleccionado.",
       );
     }
     const distance =
@@ -687,20 +756,25 @@ export class DeviceBridge {
         ? Math.min(1, Math.max(0, options.distance))
         : 0.5;
     const slotIndex = cabinet - 1;
-    const result = await session.loadIrFromWav({
-      wav,
-      slotIndex,
-      cabinet,
-      volume: distance,
-      presence: cabinet === 8 ? "upload" : "factory",
-      timeoutMs: 8_000,
+    return this.#serialMidi(async () => {
+      const session = this.#requireSession();
+      const previous = await session.dumpIrRom({ slotIndex, timeoutMs: 5_000 });
+      await saveBackup(previous.data);
+      const result = await session.loadIrFromWav({
+        wav,
+        slotIndex,
+        cabinet,
+        volume: distance,
+        presence: cabinet === 8 ? "upload" : "factory",
+        timeoutMs: 8_000,
+      });
+      return {
+        slotIndex: result.slotIndex,
+        cabinet: result.cabinet,
+        persistVerified: result.persist.verified,
+        liveMatch: `${result.liveMatchPrefix}/${result.liveMatchTotal}`,
+      };
     });
-    return {
-      slotIndex: result.slotIndex,
-      cabinet: result.cabinet,
-      persistVerified: result.persist.verified,
-      liveMatch: `${result.liveMatchPrefix}/${result.liveMatchTotal}`,
-    };
   }
 
   /** Read bank bytes + JSON document (tonehub-cube-baby-bank-v1). */

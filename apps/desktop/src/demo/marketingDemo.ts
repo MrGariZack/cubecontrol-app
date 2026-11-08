@@ -225,6 +225,8 @@ export function installDemoDesktopApi(connection: DesktopConnectionInfo): void {
 
   const api: ToneHubDesktopApi = {
     listPorts: async () => [],
+    onPortsChanged: () => () => undefined,
+    onPedalDetached: () => () => undefined,
     connect: async () => connection,
     disconnect: async () => undefined,
     getBank: async () => bank,

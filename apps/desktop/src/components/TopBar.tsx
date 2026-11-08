@@ -1,7 +1,7 @@
 import type { PresetSlotId } from "@tonehub/cube-baby-protocol";
 import { SlotSwitcher } from "./SlotSwitcher";
 
-/** Pedal Cabinet 1..8 → ROM IR slots 0..7 (Cab 8 = upload). */
+/** Pedal Cabinet 1..8 → ROM IR slots 0..7. */
 const IR_CABINETS = [1, 2, 3, 4, 5, 6, 7, 8] as const;
 const ALL_SLOTS: readonly PresetSlotId[] = ["A", "B", "C"];
 
@@ -112,10 +112,10 @@ export function TopBar({
             onChange={(event) => onIrCabinetChange(Number(event.target.value))}
             aria-label="Cabinet / slot IR destino"
           >
+            <option value={0} disabled>{"Elige Cabinet"}</option>
             {IR_CABINETS.map((cabinet) => (
               <option key={cabinet} value={cabinet}>
                 {cabinet}
-                {cabinet === 8 ? " (upload)" : ""}
               </option>
             ))}
           </select>

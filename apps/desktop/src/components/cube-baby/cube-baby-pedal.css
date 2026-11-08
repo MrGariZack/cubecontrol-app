@@ -49,7 +49,7 @@
   position: relative;
   width: min(900px, 100%);
   aspect-ratio: 2.05 / 1;
-  border-radius: 10px;
+  border-radius: var(--radius-panel);
   padding: 3.2% 3.4% 2.8%;
   color: #f4f6f8;
   background:

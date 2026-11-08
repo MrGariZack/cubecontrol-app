@@ -17,7 +17,7 @@
   flex-direction: column;
   gap: 12px;
   padding: 28px 28px 22px;
-  border-radius: 16px;
+  border-radius: var(--radius-panel);
   border: 1px solid var(--line);
   background: linear-gradient(165deg, rgba(28, 34, 42, 0.98), rgba(12, 14, 18, 0.99));
   box-shadow: 0 24px 64px rgba(0, 0, 0, 0.45);
@@ -61,7 +61,7 @@
   resize: vertical;
   min-height: 100px;
   padding: 12px;
-  border-radius: 10px;
+  border-radius: var(--radius-control);
   border: 1px solid var(--line);
   background: rgba(0, 0, 0, 0.32);
   color: var(--ink, #eef2f6);
@@ -93,7 +93,7 @@
 .report-problem__btn {
   min-height: 38px;
   padding: 0 14px;
-  border-radius: 10px;
+  border-radius: var(--radius-control);
   border: 1px solid var(--line);
   background: transparent;
   color: var(--ink, #eef2f6);

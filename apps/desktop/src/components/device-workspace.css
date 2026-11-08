@@ -43,16 +43,32 @@
   flex-direction: column;
   gap: 14px;
   padding: 28px;
-  border-radius: 14px;
+  border-radius: var(--radius-panel);
   border: 1px solid var(--line);
-  background:
-    linear-gradient(160deg, rgba(22, 27, 34, 0.95), rgba(10, 12, 16, 0.98));
-  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.28);
+  background: var(--bg-1);
   min-height: 200px;
 }
 
-.dev-ws__card--ir {
+.dev-ws__card--ir,
+.dev-ws__card--bank {
   grid-column: 1 / -1;
+}
+
+.dev-ws__card--bank {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  row-gap: 8px;
+  min-height: 0;
+}
+
+.dev-ws__card--bank .dev-ws__card-copy {
+  grid-column: 1;
+}
+
+.dev-ws__card--bank .dev-ws__actions {
+  grid-column: 2;
+  grid-row: 1 / span 2;
 }
 
 .dev-ws__card--warn {
@@ -91,7 +107,7 @@
 .dev-ws__field select {
   min-height: 48px;
   padding: 12px 14px;
-  border-radius: 10px;
+  border-radius: var(--radius-control);
   border: 1px solid var(--line);
   background: var(--bg-1);
   color: var(--ink);
@@ -114,7 +130,7 @@
 .dev-ws__btn {
   min-height: 48px;
   padding: 12px 18px;
-  border-radius: 10px;
+  border-radius: var(--radius-control);
   border: 1px solid var(--line);
   background: transparent;
   color: var(--ink-soft);
@@ -141,7 +157,7 @@
 
 .dev-ws__btn:focus-visible,
 .dev-ws__field select:focus-visible {
-  outline: 2px solid rgba(196, 165, 116, 0.85);
+  outline: 2px solid var(--focus-ring);
   outline-offset: 2px;
 }
 
@@ -160,6 +176,13 @@
 
   .dev-ws__card--ir {
     grid-column: auto;
+  }
+}
+
+@media (max-width: 740px) {
+  .dev-ws__card--bank {
+    display: flex;
+    align-items: flex-start;
   }
 }
 

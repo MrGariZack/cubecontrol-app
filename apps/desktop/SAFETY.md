@@ -9,14 +9,14 @@ CubeControl habla con el pedal por **USB-MIDI**. No es software oficial de M-VAV
 |---|---|---|
 | **Bajo** | Knobs live, cambiar slot A/B/C a live, tuner (mic del PC) | Solo RAM / audio del PC. Reversible con Undo o recall. |
 | **Medio** | Guardar slot, import bank, igualar volúmenes A/B/C | Pisas presets del bank. Exporta bank JSON antes. |
-| **Alto** | Cargar WAV a IR ROM, restaurar backup IR, Cab 1–7 | Escribe flash. Cab **8** = upload habitual. Cab **1–7** pueden ser IRs de fábrica. |
+| **Alto** | Cargar WAV a IR ROM o restaurar un respaldo | Sobrescribe el IR del gabinete elegido (1–8). |
 
 ## Buenas prácticas
 
 1. Cierra **CubeSuite** y cualquier app que reserve el MIDI.
 2. Antes de experimentar: **Exportar bank**.
-3. Sube IRs nuevos a **Cab 8** salvo que sepas lo que haces.
-4. Si escribes Cab 1–7, CubeControl intenta **backup ROM local** antes; no es garantía absoluta.
+3. Elige y confirma qué gabinete quieres sobrescribir. CubeControl guarda un respaldo local antes de cargar un WAV. En escritorio, también respalda el contenido actual antes de restaurar.
+4. CubeControl comprueba la lectura del sector antes de seleccionar el gabinete.
 5. Si un write IR falla a medias: no entres en pánico, no spamees writes; restaura desde backup o usa el CLI del hardware-core con calma.
 
 ## Limitación de responsabilidad

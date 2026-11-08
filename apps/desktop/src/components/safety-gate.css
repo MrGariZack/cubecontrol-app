@@ -10,6 +10,7 @@
 }
 
 .safety-gate__card {
+  border-radius: var(--radius-panel);
   width: min(720px, 100%);
   border: 1px solid var(--line);
   background: rgba(14, 17, 22, 0.94);
@@ -59,6 +60,7 @@
 }
 
 .safety-gate__tier {
+  border-radius: var(--radius-control);
   border: 1px solid var(--line);
   padding: 12px 14px;
   background: rgba(255, 255, 255, 0.02);
@@ -145,6 +147,10 @@
 
 .safety-gate__cta:disabled {
   opacity: 0.4;
+}
+
+.safety-gate__cta:hover:not(:disabled) {
+  background: #59d3c7;
 }
 
 .safety-gate__report {

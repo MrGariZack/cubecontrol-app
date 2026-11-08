@@ -1,13 +1,12 @@
 import { confirmAction } from "./confirm";
 import type { TFunction } from "../i18n";
 
-/** Cab 8: no extra confirm. Cab 1–7: two destructive confirms (desktop double-gate). */
+/** Confirm the selected ROM overwrite, regardless of cabinet. */
 export async function confirmIrCabinetWrite(
   t: TFunction,
   cabinet: number,
   fileName?: string,
 ): Promise<boolean> {
-  if (cabinet === 8) return true;
   const first = await confirmAction({
     title: t("studio.overwriteCabTitle", { cab: cabinet }),
     message: `${t("studio.overwriteCabBody")}${
@@ -28,7 +27,6 @@ export async function confirmIrCabinetWrite(
 }
 
 export async function confirmSongIrWrite(t: TFunction, cabinet: number): Promise<boolean> {
-  if (cabinet === 8) return true;
   const first = await confirmAction({
     title: t("studio.songIrTitle", { cab: cabinet }),
     message: t("studio.songIrBody"),

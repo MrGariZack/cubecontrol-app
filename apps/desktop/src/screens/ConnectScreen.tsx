@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useI18n } from "../i18n";
+import { HelpButton } from "../help/Guide";
 import type { DesktopConnectionInfo } from "../types/device";
 import { LanguageSwitcher } from "../components/LanguageSwitcher";
 import { AccountMenu } from "../components/AccountMenu";
@@ -16,6 +17,8 @@ export function ConnectScreen({ onConnected, onOpenLibrary }: ConnectScreenProps
   const [phase, setPhase] = useState<"idle" | "connecting" | "error">("idle");
   const [error, setError] = useState<string | null>(null);
   const [portsHint, setPortsHint] = useState("");
+  const phaseRef = useRef(phase);
+  phaseRef.current = phase;
   const brandRef = useRef<HTMLDivElement>(null);
   const signalRef = useRef<HTMLDivElement>(null);
 
@@ -34,19 +37,9 @@ export function ConnectScreen({ onConnected, onOpenLibrary }: ConnectScreenProps
     });
   }, []);
 
-  useEffect(() => {
-    void window.tonehubDesktop.listPorts().then((ports) => {
-      const confirmed = ports.filter((port) => port.cubeBabyMatch === "confirmed");
-      setPortsHint(
-        confirmed.length > 0
-          ? t("connect.portsFound", { count: confirmed.length })
-          : t("connect.portsMissing"),
-      );
-    });
-  }, [t, locale]);
-
   async function onConnect() {
-    if (phase === "connecting") return;
+    if (phaseRef.current === "connecting") return;
+    phaseRef.current = "connecting";
     setError(null);
     setPhase("connecting");
     try {
@@ -54,16 +47,46 @@ export function ConnectScreen({ onConnected, onOpenLibrary }: ConnectScreenProps
       const info = await window.tonehubDesktop.connect();
       onConnected(info);
     } catch (err) {
+      phaseRef.current = "error";
       setPhase("error");
       setError(err instanceof Error ? err.message : String(err));
     }
   }
 
+  useEffect(() => {
+    let cancelled = false;
+    let generation = 0;
+
+    const refresh = async () => {
+      const ticket = ++generation;
+      const ports = await window.tonehubDesktop.listPorts();
+      if (cancelled || ticket !== generation) return;
+      const matched = ports.filter(
+        (port) => port.cubeBabyMatch === "confirmed" || port.cubeBabyMatch === "candidate",
+      );
+      setPortsHint(
+        matched.length > 0
+          ? t("connect.portsFound", { count: matched.length })
+          : t("connect.portsMissing"),
+      );
+    };
+
+    void refresh();
+    const unsubscribe = window.tonehubDesktop.onPortsChanged(() => {
+      void refresh();
+    });
+    return () => {
+      cancelled = true;
+      unsubscribe();
+    };
+  }, [t, locale]);
+
   return (
     <main className="connect">
-      <div className="connect__lang">
+      <div className="connect__lang" data-guide="language">
         <AccountMenu />
         <LanguageSwitcher />
+        <HelpButton />
       </div>
       <div ref={signalRef} className="connect__signal" />
       <div ref={brandRef}>
@@ -73,7 +96,7 @@ export function ConnectScreen({ onConnected, onOpenLibrary }: ConnectScreenProps
         <p className="connect__hint">{portsHint}</p>
         <p className="connect__safety">{t("connect.safety")}</p>
       </div>
-      <div className="connect__actions">
+      <div className="connect__actions" data-guide="connection">
         <button
           type="button"
           className="connect__cta"
@@ -94,6 +117,7 @@ export function ConnectScreen({ onConnected, onOpenLibrary }: ConnectScreenProps
         <button
           type="button"
           className="connect__report"
+          data-guide="report"
           onClick={openReportProblem}
           disabled={phase === "connecting"}
         >

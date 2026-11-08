@@ -1,6 +1,7 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { App } from "./App";
+import { GuideProvider } from "./help/Guide";
 import { I18nProvider } from "./i18n";
 import { readStoredLocale } from "./i18n/types";
 import { ReportProblemProvider } from "./report/ReportProblemContext";
@@ -17,7 +18,9 @@ createRoot(root).render(
   <StrictMode>
     <I18nProvider>
       <ReportProblemProvider>
-        <App />
+        <GuideProvider>
+          <App />
+        </GuideProvider>
       </ReportProblemProvider>
     </I18nProvider>
   </StrictMode>,

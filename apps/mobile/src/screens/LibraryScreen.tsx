@@ -137,7 +137,7 @@ export function LibraryScreen() {
       delayNote: songDraft.delayNote,
       ...(songDraft.bpm === "" ? {} : { bpm: clampBpm(songDraft.bpm) }),
       ...(songDraft.irId
-        ? { irId: songDraft.irId, irCabinet: app.irCabinet, irDistance: app.irDistance }
+        ? { irId: songDraft.irId, ...(app.irCabinet ? { irCabinet: app.irCabinet } : {}), irDistance: app.irDistance }
         : {}),
     });
     setSongDraft(null);
@@ -226,6 +226,7 @@ export function LibraryScreen() {
   async function sendIr(id: string) {
     const ir = app.library.irs.find((item) => item.id === id);
     if (!ir) return;
+    if (!app.irCabinet) return;
     const ok = await confirmIrCabinetWrite(t, app.irCabinet, ir.name);
     if (!ok) return;
     if (!app.safetyAccepted) {
@@ -846,8 +847,8 @@ export function LibraryScreen() {
               <View key={ir.id} style={styles.card}>
                 <Text style={styles.rowTitle}>{ir.name}</Text>
                 <Button
-                  label={t("lib.toPedalCab", { cab: app.irCabinet })}
-                  disabled={app.busy || app.connection === null}
+                  label={app.irCabinet ? t("lib.toPedalCab", { cab: app.irCabinet }) : t("device.ir.load")}
+                  disabled={app.busy || app.connection === null || app.irCabinet === 0}
                   onPress={() => void sendIr(ir.id)}
                 />
                 <Button variant="ghost" label={t("common.delete")} onPress={() => void app.deleteIr(ir.id)} />

@@ -1,7 +1,7 @@
 import { clearSafetyAcceptance } from "../safety/disclaimer";
 import { MicDistanceRail } from "./cube-baby/MicDistanceRail";
 
-/** Pedal Cabinet 1..8 → ROM IR slots 0..7 (Cab 8 = upload). */
+/** Pedal Cabinet 1..8 → ROM IR slots 0..7. */
 const IR_CABINETS = [1, 2, 3, 4, 5, 6, 7, 8] as const;
 
 type DevicePanelProps = {
@@ -37,7 +37,7 @@ export function DevicePanel({
       <div className="device-panel__warn">
         <strong>Riesgo hardware</strong>
         <span>
-          Live = bajo · Bank = medio · IR ROM Cab 1–7 = alto. Sin garantía. No oficial M-VAVE.
+          Live = bajo · Bank = medio · IR ROM = alto. Sin garantía. No oficial M-VAVE.
           Detalle en <code>apps/desktop/SAFETY.md</code>.
         </span>
       </div>
@@ -61,10 +61,10 @@ export function DevicePanel({
             disabled={busy}
             onChange={(event) => onIrCabinetChange(Number(event.target.value))}
           >
+            <option value={0} disabled>{"Elige Cabinet"}</option>
             {IR_CABINETS.map((cabinet) => (
               <option key={cabinet} value={cabinet}>
                 Cab {cabinet}
-                {cabinet === 8 ? " · upload seguro" : " · riesgo factory"}
               </option>
             ))}
           </select>

@@ -178,7 +178,7 @@ export function SyncPanel() {
         <h2 className="sync-panel__title">Este aparato y la nube no coinciden</h2>
         <p className="sync-panel__mute">
           Local: {prepare.localCount} ítems · Nube: {prepare.remoteCount}. Si mezclamos a ciegas
-          vas a ver duplicados. Elige un lado.
+          vas a ver duplicados. Elige un lado. Los WAV locales se conservan al usar la nube.
         </p>
         {prepare.twins.length > 0 ? (
           <label className="sync-panel__check">

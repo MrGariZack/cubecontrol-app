@@ -24,8 +24,8 @@ export const SAFETY_RISK_TIERS = [
   {
     id: "ir",
     level: "Alto",
-    title: "Cargar o restaurar IR en ROM (sobre todo Cab 1–7)",
-    body: "Escribe memoria flash del pedal. Cab 8 es el slot de upload habitual. Sobreescribir Cab 1–7 puede pisar IRs de fábrica; CubeControl intenta backup local, pero no garantiza recuperación perfecta.",
+    title: "Cargar o restaurar IR en ROM",
+    body: "Cargar o restaurar un IR sobrescribe la memoria del gabinete seleccionado. CubeControl verifica los datos antes de seleccionar ese gabinete.",
   },
 ] as const;
 
@@ -33,7 +33,7 @@ export const SAFETY_BULLETS = [
   "CubeControl es software experimental / hobby, sin garantía de ningún tipo.",
   "Úsalo bajo tu propia responsabilidad. Los autores no se hacen responsables de daños al CUBE Baby, pérdida de IRs/presets, ni lucro cesante.",
   "Cierra CubeSuite y cualquier otra app que use el puerto MIDI antes de conectar.",
-  "Exporta un bank JSON antes de experimentar. Prefiere IR → Cab 8.",
+  "Exporta un bank JSON antes de experimentar.",
   "Si un write IR falla a mitad, no desconectes a la brava: reintenta restore desde backup o usa herramientas del core con calma.",
   "No es un producto oficial de M-VAVE / Cuvave / Valeton.",
 ] as const;

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useI18n } from "../i18n";
+import { HelpButton } from "../help/Guide";
 import { writeSafetyAcceptance } from "../safety/disclaimer";
 import { useReportProblem } from "../report/ReportProblemContext";
 import { LanguageSwitcher } from "./LanguageSwitcher";
@@ -28,8 +29,8 @@ export function SafetyGate({ onAccepted }: SafetyGateProps) {
 
   return (
     <main className="safety-gate">
-      <div className="safety-gate__card">
-        <div className="safety-gate__lang">
+      <div className="safety-gate__card" data-guide="safety">
+        <div className="safety-gate__lang" data-guide="language">
           <LanguageSwitcher />
         </div>
         <p className="safety-gate__eyebrow">{t("safety.eyebrow")}</p>
@@ -75,7 +76,7 @@ export function SafetyGate({ onAccepted }: SafetyGateProps) {
               checked={noOfficial}
               onChange={(e) => setNoOfficial(e.target.checked)}
             />
-            {t("safety.check.cab8")}
+            {t("safety.check.ir")}
           </label>
         </div>
 
@@ -87,9 +88,10 @@ export function SafetyGate({ onAccepted }: SafetyGateProps) {
         >
           {t("safety.cta")}
         </button>
-        <button type="button" className="safety-gate__report" onClick={openReportProblem}>
+        <button type="button" className="safety-gate__report" data-guide="report" onClick={openReportProblem}>
           {t("report.open")}
         </button>
+        <HelpButton />
         <p className="safety-gate__foot">{t("safety.foot")}</p>
       </div>
     </main>

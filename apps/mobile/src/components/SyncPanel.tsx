@@ -18,7 +18,7 @@ export function SyncPanel() {
       <View style={styles.card}>
         <Text style={styles.title}>Este aparato y la nube no coinciden</Text>
         <Text style={styles.muted}>
-          Local: {prepare.localCount} · Nube: {prepare.remoteCount}. Elige un lado para no duplicar.
+          Local: {prepare.localCount} · Nube: {prepare.remoteCount}. Elige un lado para no duplicar. Los WAV locales se conservan al usar la nube.
         </Text>
         {prepare.twins.length > 0 ? (
           <Text style={styles.muted}>

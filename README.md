@@ -10,10 +10,10 @@ Hardware protocol lives in the sibling core: [cubecontrol](https://github.com/Mr
 | **App repo** | https://github.com/MrGariZack/cubecontrol-app |
 | **Core repo** | https://github.com/MrGariZack/cubecontrol |
 | **Downloads** | [Releases](https://github.com/MrGariZack/cubecontrol-app/releases) (Windows, Linux AppImage, Android APK) |
-| **Version** | `0.1.3` — see [`CHANGELOG.md`](CHANGELOG.md) |
+| **Version** | `0.1.4` — see [`CHANGELOG.md`](CHANGELOG.md) |
 | **Publish guide** | [`docs/PUBLISH.md`](docs/PUBLISH.md) |
 
-**Safety:** experimental USB writer — [`apps/desktop/SAFETY.md`](apps/desktop/SAFETY.md). Not affiliated with M-VAVE. Prefer IR uploads to **Cabinet 8**; export bank before risky ops.
+**Safety:** experimental USB writer — [`apps/desktop/SAFETY.md`](apps/desktop/SAFETY.md). Not affiliated with M-VAVE. IR uploads overwrite the selected cabinet. Export the bank before experimenting.
 
 ## Stack
 
@@ -34,6 +34,24 @@ pnpm desktop
 ```
 
 Close CubeSuite, connect the CUBE Baby over USB, then **Connect USB**.
+
+### Interactive help
+
+Choose **Help** or press **F1** in the desktop app. Search for a feature, take a
+short chapter, or follow the full tour. The guide opens the relevant screen and
+highlights available controls. See the [desktop feature review](docs/desktop-feature-review.md)
+for coverage and checks that still require connected equipment or an account.
+
+### Record a performance
+
+Open **Clips** in the desktop studio. Choose the camera, framing, and audio input.
+Select the pedal's USB audio input if your system lists one. Otherwise, connect
+the pedal's audio output to an interface and select that input. Enable the preview
+and play a few notes to check the level before recording.
+
+The virtual pedal reflects the slot and settings shown in CubeControl. You can
+return to the editor during a take. Stop, play back the video, and save it to disk.
+Takes are recorded locally at 720p in landscape or portrait, up to five minutes.
 
 ### Windows installers (local)
 

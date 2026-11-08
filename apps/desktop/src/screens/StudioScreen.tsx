@@ -19,7 +19,9 @@ import {
 import { useConfirmDialog } from "../hooks/useConfirmDialog";
 import { useDebouncedLiveWrite } from "../hooks/useDebouncedLiveWrite";
 import { useI18n } from "../i18n";
+import { useGuide } from "../help/Guide";
 import { isLibraryOnlyConnection } from "../libraryOnly";
+import { ClipWorkspace } from "../recording/ClipWorkspace";
 import type { BankSnapshot, DesktopConnectionInfo, LiveParamsSnapshot } from "../types/device";
 import type { MatchVolumesSource } from "../../electron/deviceBridge";
 import type { ShowLibraryItem, SlotDiffRow, SongLibraryItem } from "../../electron/library/types";
@@ -37,6 +39,7 @@ function liveDiffersFromBankSlot(
 type StudioScreenProps = {
   readonly connection: DesktopConnectionInfo;
   readonly onDisconnect: () => void;
+  readonly onRecordingChange: (recording: boolean) => void;
 };
 
 function slotParams(bank: BankSnapshot, slot: PresetSlotId): LiveParamsSnapshot {
@@ -48,13 +51,14 @@ function slotParams(bank: BankSnapshot, slot: PresetSlotId): LiveParamsSnapshot 
   return params;
 }
 
-export function StudioScreen({ connection, onDisconnect }: StudioScreenProps) {
+export function StudioScreen({ connection, onDisconnect, onRecordingChange }: StudioScreenProps) {
   const { t } = useI18n();
+  const { request: guide } = useGuide();
   const hasPedal = !isLibraryOnlyConnection(connection);
   const [activeSlot, setActiveSlot] = useState<PresetSlotId>(connection.activeSlot);
   const [params, setParams] = useState<LiveParamsSnapshot>(connection.liveParams);
   const [bank, setBank] = useState<BankSnapshot>(connection.bank);
-  const [irCabinet, setIrCabinet] = useState(8);
+  const [irCabinet, setIrCabinet] = useState(0);
   const [irDistance, setIrDistance] = useState(() => {
     try {
       const raw = localStorage.getItem("cubecontrol.irDistance");
@@ -66,7 +70,33 @@ export function StudioScreen({ connection, onDisconnect }: StudioScreenProps) {
     }
   });
   const [nav, setNav] = useState<StudioNavId>(hasPedal ? "editor" : "library");
+  const [clipsOpened, setClipsOpened] = useState(false);
+  const [recording, setRecording] = useState(false);
+  const reportRecording = useCallback((active: boolean) => {
+    setRecording(active);
+    onRecordingChange(active);
+  }, [onRecordingChange]);
   const [activeShow, setActiveShow] = useState<ShowLibraryItem | null>(null);
+  const guideHandled = useRef(0);
+  useEffect(() => {
+    if (!guide || guideHandled.current === guide.sequence) return;
+    guideHandled.current = guide.sequence;
+    const page = guide.step.page;
+    if (page === "clips") {
+      setClipsOpened(true);
+      setNav("clips");
+    } else if (page === "editor" || page === "tuner" || page === "device") {
+      setNav(page);
+    } else if (page === "stage" && activeShow?.songIds.length) {
+      setNav("stage");
+    } else if (page === "connect" && guide.step.id === "safety" && hasPedal) {
+      setNav("device");
+    } else if (page === "account") {
+      setNav((current) => current === "stage" ? "library" : current);
+    } else if (page !== "current" && page !== "connect") {
+      setNav("library");
+    }
+  }, [guide, activeShow, hasPedal]);
   const [activeSongIndex, setActiveSongIndex] = useState(0);
   const [librarySongs, setLibrarySongs] = useState<SongLibraryItem[]>([]);
   const [actionBusy, setActionBusy] = useState(false);
@@ -94,6 +124,16 @@ export function StudioScreen({ connection, onDisconnect }: StudioScreenProps) {
   paramsRef.current = params;
   slotRef.current = activeSlot;
   bankRef.current = bank;
+
+  // Library-only → real pedal must adopt the live bank without leaving the current tab.
+  useEffect(() => {
+    setActiveSlot(connection.activeSlot);
+    setParams(connection.liveParams);
+    setBank(connection.bank);
+    setLiveDirty(false);
+    // Only when the session identity changes (library placeholder vs USB pedal).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [connection.inputPortId]);
   // Slot sync runs in background — only block UI for save/IR/bank mutations.
   const busy = actionBusy;
 
@@ -368,7 +408,7 @@ export function StudioScreen({ connection, onDisconnect }: StudioScreenProps) {
       return;
     }
     // Must open the file picker synchronously from the click gesture.
-    // confirm/prompt first (Cab 1–7) consumes the gesture and Chromium blocks .click().
+    // confirm/prompt first consumes the gesture and Chromium blocks .click().
     fileRef.current?.click();
   }
 
@@ -376,31 +416,29 @@ export function StudioScreen({ connection, onDisconnect }: StudioScreenProps) {
     const file = fileList?.[0];
     if (file === undefined) return;
 
-    if (irCabinet !== 8) {
-      const ok = await confirm({
-        title: t("studio.overwriteCabTitle", { cab: irCabinet }),
-        body: t("studio.overwriteCabBody"),
-        detail: t("studio.overwriteCabDetail", { file: file.name, rom: irCabinet - 1 }),
-        tone: "danger",
-        confirmLabel: t("common.follow"),
-      });
-      if (!ok) {
-        if (fileRef.current) fileRef.current.value = "";
-        setStatus(t("studio.irCancelled"));
-        return;
-      }
-      const ok2 = await confirm({
-        title: t("studio.irLastTitle"),
-        body: t("studio.irLastBody", { cab: irCabinet }),
-        tone: "danger",
-        requireTyped: `CAB${irCabinet}`,
-        confirmLabel: t("studio.irWrite"),
-      });
-      if (!ok2) {
-        if (fileRef.current) fileRef.current.value = "";
-        setStatus(t("studio.irCancelled2"));
-        return;
-      }
+    const ok = await confirm({
+      title: t("studio.overwriteCabTitle", { cab: irCabinet }),
+      body: t("studio.overwriteCabBody"),
+      detail: t("studio.overwriteCabDetail", { file: file.name, rom: irCabinet - 1 }),
+      tone: "danger",
+      confirmLabel: t("common.follow"),
+    });
+    if (!ok) {
+      if (fileRef.current) fileRef.current.value = "";
+      setStatus(t("studio.irCancelled"));
+      return;
+    }
+    const ok2 = await confirm({
+      title: t("studio.irLastTitle"),
+      body: t("studio.irLastBody", { cab: irCabinet }),
+      tone: "danger",
+      requireTyped: `CAB${irCabinet}`,
+      confirmLabel: t("studio.irWrite"),
+    });
+    if (!ok2) {
+      if (fileRef.current) fileRef.current.value = "";
+      setStatus(t("studio.irCancelled2"));
+      return;
     }
 
     const romSlot = irCabinet - 1;
@@ -424,7 +462,7 @@ export function StudioScreen({ connection, onDisconnect }: StudioScreenProps) {
       await pushCheckpoint(t("studio.checkpoint.ir"));
       const buffer = new Uint8Array(await file.arrayBuffer());
       const result = await window.tonehubDesktop.loadIrFromWav(buffer, irCabinet, {
-        confirmFactoryIrOverwrite: irCabinet !== 8,
+        confirmIrOverwrite: true,
         distance: irDistance,
       });
       setParams((prev) => ({ ...prev, cabinet: result.cabinet }));
@@ -765,34 +803,38 @@ export function StudioScreen({ connection, onDisconnect }: StudioScreenProps) {
         setTempoSynced(true);
       }
       if (song.irId) {
-        const cabinet = song.irCabinet ?? irCabinet;
-        if (cabinet !== 8) {
-          const ok = await confirm({
-            title: t("studio.songIrTitle", { cab: cabinet }),
-            body: t("studio.songIrBody"),
-            tone: "danger",
-            confirmLabel: t("common.follow"),
-          });
-          if (!ok) {
-            setStatus(t("studio.songIrSkipped", { name: song.name }));
-            checkpointArmed.current = true;
-            return;
-          }
-          const ok2 = await confirm({
-            title: t("studio.irLastTitle"),
-            body: t("studio.songIrLastBody", { cab: cabinet }),
-            tone: "danger",
-            requireTyped: `CAB${cabinet}`,
-            confirmLabel: t("studio.irWrite"),
-          });
-          if (!ok2) {
-            setStatus(t("studio.songIrSkipped", { name: song.name }));
-            checkpointArmed.current = true;
-            return;
-          }
+        const cabinet = song.irCabinet && song.irCabinet >= 1 && song.irCabinet <= 8
+          ? song.irCabinet
+          : irCabinet;
+        if (cabinet === 0) {
+          setStatus(t("studio.pickCab"));
+          return;
+        }
+        const ok = await confirm({
+          title: t("studio.songIrTitle", { cab: cabinet }),
+          body: t("studio.songIrBody"),
+          tone: "danger",
+          confirmLabel: t("common.follow"),
+        });
+        if (!ok) {
+          setStatus(t("studio.songIrSkipped", { name: song.name }));
+          checkpointArmed.current = true;
+          return;
+        }
+        const ok2 = await confirm({
+          title: t("studio.irLastTitle"),
+          body: t("studio.songIrLastBody", { cab: cabinet }),
+          tone: "danger",
+          requireTyped: `CAB${cabinet}`,
+          confirmLabel: t("studio.irWrite"),
+        });
+        if (!ok2) {
+          setStatus(t("studio.songIrSkipped", { name: song.name }));
+          checkpointArmed.current = true;
+          return;
         }
         await window.tonehubDesktop.library.loadIrToPedal(song.irId, cabinet, {
-          confirmFactoryIrOverwrite: cabinet !== 8,
+          confirmIrOverwrite: true,
           distance: song.irDistance ?? irDistance,
         });
         setParams((prev) => ({ ...prev, cabinet }));
@@ -906,7 +948,11 @@ export function StudioScreen({ connection, onDisconnect }: StudioScreenProps) {
         activeSlot={activeSlot}
         nav={nav}
         busy={busy}
-        onNav={setNav}
+        onNav={(next) => {
+          if (next === "clips") setClipsOpened(true);
+          setNav(next);
+        }}
+        recording={recording}
         onSelectSlot={(slot) => void onSelectSlot(slot)}
         onDisconnect={onDisconnect}
         hasPedal={hasPedal}
@@ -934,18 +980,29 @@ export function StudioScreen({ connection, onDisconnect }: StudioScreenProps) {
         <div className="studio__canvas">
           <main
             className={
-              nav === "tuner" || nav === "library" || nav === "stage" || nav === "device"
+              nav === "tuner" || nav === "library" || nav === "stage" || nav === "device" || nav === "clips"
                 ? "studio__main studio__main--wide"
                 : "studio__main studio__main--pedal"
             }
           >
-            {nav === "tuner" ? (
+            {clipsOpened ? (
+              <ClipWorkspace
+                active={nav === "clips"}
+                hasPedal={hasPedal}
+                params={params}
+                slot={activeSlot}
+                onRecordingChange={reportRecording}
+              />
+            ) : null}
+            {nav === "clips" ? null : nav === "tuner" ? (
               <TunerPanel active={nav === "tuner"} />
             ) : nav === "library" ? (
               <LibraryWorkspace
                 busy={busy}
+                hasPedal={hasPedal}
                 liveParams={params}
                 irCabinet={irCabinet}
+                onIrCabinetChange={setIrCabinet}
                 irDistance={irDistance}
                 activeShowId={activeShow?.id ?? null}
                 activeSongIndex={activeSongIndex}
@@ -991,6 +1048,7 @@ export function StudioScreen({ connection, onDisconnect }: StudioScreenProps) {
             ) : nav === "stage" && activeShow ? (
               <StageMode
                 show={activeShow}
+                hasPedal={hasPedal}
                 songs={librarySongs}
                 songIndex={activeSongIndex}
                 busy={busy}

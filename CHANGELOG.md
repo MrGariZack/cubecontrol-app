@@ -7,12 +7,27 @@ Format: based on [Keep a Changelog](https://keepachangelog.com/). Versioning: [S
 
 ## [Unreleased]
 
-### Added
-- Linux x64 AppImage and `.deb` on GitHub Releases (download, run)
-
 ### Planned
 - Pack → Show import round-trip
 - Signed Windows builds (Authenticode)
+
+## [0.1.4] — 2026-11-07
+
+### Added
+- In-app help (`F1`): searchable guide and a full tour, in Spanish and English
+- Performance clips: camera, pedal audio, and the virtual pedal in one local video
+- The pedal connects by itself when it is plugged in, including from the library
+- Linux x64 AppImage and `.deb` on GitHub Releases
+
+### Changed
+- Library, stage, tuner, and studio layout are easier to scan
+- Actions that need the pedal stay disabled until it is connected
+- The tuner and the spectrum analyzer ask for the microphone only when you start them
+
+### Fixed
+- Unplugging the USB cable no longer closes the app
+- A pedal plugged in after startup is detected without restarting
+- Stage `Enter` follows the focused control
 
 ## [0.1.3] — 2026-09-18
 
@@ -55,6 +70,7 @@ Format: based on [Keep a Changelog](https://keepachangelog.com/). Versioning: [S
 - Unofficial / experimental USB writer — see `apps/desktop/SAFETY.md`
 - Builds are **unsigned** (SmartScreen expected)
 
+[0.1.4]: https://github.com/MrGariZack/cubecontrol-app/releases/tag/v0.1.4
 [0.1.3]: https://github.com/MrGariZack/cubecontrol-app/releases/tag/v0.1.3
 [0.1.2]: https://github.com/MrGariZack/cubecontrol-app/releases/tag/v0.1.2
 [0.1.1]: https://github.com/MrGariZack/cubecontrol-app/releases/tag/v0.1.1

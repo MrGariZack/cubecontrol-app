@@ -55,7 +55,7 @@ export function SafetyGate({ onAccepted, onCancel }: Props) {
         />
         <CheckRow label={t("safety.check.own")} checked={ownRisk} onChange={setOwnRisk} />
         <CheckRow
-          label={t("safety.check.cab8")}
+          label={t("safety.check.ir")}
           checked={noOfficial}
           onChange={setNoOfficial}
         />

@@ -71,13 +71,26 @@ export function DeviceScreen() {
       if (!confirmed) return;
       const wav = await readUriBytes(file.uri);
       await app.loadIrWav(wav, app.irCabinet, {
-        confirmFactoryIrOverwrite: app.irCabinet !== 8,
+        confirmIrOverwrite: true,
         distance: app.irDistance,
         fileName: file.name,
       });
     } catch (err) {
       alertFilesError(err);
     }
+  }
+
+  async function onRestoreIr() {
+    const cabinet = app.irCabinet;
+    if (!cabinet || !(await ensureSafety())) return;
+    const confirmed = await confirmAction({
+      title: t("device.ir.restore"),
+      message: t("studio.irLastBody", { cab: cabinet }),
+      confirmLabel: t("studio.irWrite"),
+      cancelLabel: t("common.cancel"),
+      destructive: true,
+    });
+    if (confirmed) await app.restoreLastIrBackup(cabinet, confirmed);
   }
 
   async function onCompare() {
@@ -200,8 +213,7 @@ export function DeviceScreen() {
             ))}
           </View>
           <Text style={styles.hint}>
-            Cab {app.irCabinet}
-            {app.irCabinet === 8 ? t("device.ir.safe") : t("device.ir.risk")}
+            {app.irCabinet ? `Cab ${app.irCabinet}` : t("device.ir.cabinet")}
           </Text>
           <Text style={styles.label}>{t("mic.hint")}</Text>
           <View style={styles.distRow}>
@@ -223,7 +235,13 @@ export function DeviceScreen() {
               style={styles.step}
             />
           </View>
-          <Button label={t("device.ir.load")} disabled={app.busy} onPress={() => void onLoadIr()} />
+          <Button label={t("device.ir.load")} disabled={app.busy || app.irCabinet === 0} onPress={() => void onLoadIr()} />
+          <Button
+            variant="secondary"
+            label={t("device.ir.restore")}
+            disabled={app.busy || app.irCabinet === 0 || app.connection?.mode !== "usb"}
+            onPress={() => void onRestoreIr()}
+          />
         </View>
 
         <View style={styles.card}>

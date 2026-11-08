@@ -61,7 +61,7 @@ export type ToneHubLibraryApi = {
   loadIrToPedal: (
     irId: string,
     cabinet: number,
-    options?: { confirmFactoryIrOverwrite?: boolean; distance?: number },
+    options?: { confirmIrOverwrite?: boolean; distance?: number },
   ) => Promise<LoadIrResult>;
   restoreIrBackup: (
     backupId: string,
@@ -141,7 +141,14 @@ export type ToneHubLibraryApi = {
 };
 
 export type ToneHubDesktopApi = {
+  readonly clipExport?: {
+    begin: (name: string, size: number) => Promise<boolean>;
+    write: (bytes: Uint8Array) => Promise<void>;
+    end: (commit: boolean) => Promise<string | null>;
+  };
   listPorts: () => Promise<DesktopPortInfo[]>;
+  onPortsChanged: (callback: () => void) => () => void;
+  onPedalDetached: (callback: () => void) => () => void;
   connect: () => Promise<DesktopConnectionInfo>;
   disconnect: () => Promise<void>;
   getBank: () => Promise<BankSnapshot>;
@@ -153,7 +160,7 @@ export type ToneHubDesktopApi = {
   loadIrFromWav: (
     wav: Uint8Array,
     cabinet: number,
-    options?: { confirmFactoryIrOverwrite?: boolean; distance?: number },
+    options?: { confirmIrOverwrite?: boolean; distance?: number },
   ) => Promise<LoadIrResult>;
   exportBank: () => Promise<ExportBankResult | null>;
   importBank: (liveSlot: PresetSlotId) => Promise<ImportBankResult | null>;
@@ -226,7 +233,22 @@ const library: ToneHubLibraryApi = {
 };
 
 const api: ToneHubDesktopApi = {
+  clipExport: {
+    begin: (name, size) => ipcRenderer.invoke("clips:beginExport", name, size),
+    write: (bytes) => ipcRenderer.invoke("clips:writeExport", bytes),
+    end: (commit) => ipcRenderer.invoke("clips:endExport", commit),
+  },
   listPorts: () => ipcRenderer.invoke("tonehub:listPorts"),
+  onPortsChanged: (callback) => {
+    const listener = () => callback();
+    ipcRenderer.on("tonehub:portsChanged", listener);
+    return () => ipcRenderer.removeListener("tonehub:portsChanged", listener);
+  },
+  onPedalDetached: (callback) => {
+    const listener = () => callback();
+    ipcRenderer.on("tonehub:pedalDetached", listener);
+    return () => ipcRenderer.removeListener("tonehub:pedalDetached", listener);
+  },
   connect: () => ipcRenderer.invoke("tonehub:connect"),
   disconnect: () => ipcRenderer.invoke("tonehub:disconnect"),
   getBank: () => ipcRenderer.invoke("tonehub:getBank"),

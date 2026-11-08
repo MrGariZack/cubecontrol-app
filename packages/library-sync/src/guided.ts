@@ -10,6 +10,7 @@ function entriesFromSnapshot(snapshot: readonly SyncRecord[]): SyncState["entrie
     entries[fingerprintKey(record.kind, record.id)] = {
       updatedAt: record.updatedAt,
       deleted: false,
+      ...(record.kind === "ir" ? { hadLocalIr: true } : {}),
     };
   }
   return entries;
@@ -39,6 +40,8 @@ export async function pullCloudReplaceLocal(
 
   let appliedDeletes = 0;
   for (const record of local) {
+    // The cloud only stores IR metadata. An absent row cannot replace a local WAV.
+    if (record.kind === "ir") continue;
     if (alive.has(keyOf(record.kind, record.id))) continue;
     await repo.remove(record.kind, record.id);
     appliedDeletes += 1;
@@ -74,7 +77,9 @@ export async function uploadLocalReplaceCloud(
     record,
   }));
   const deletes: SyncChange[] = peeked.changes
-    .filter((change) => !change.deleted && !localKeys.has(keyOf(change.kind, change.id)))
+    .filter((change) =>
+      change.kind !== "ir" && !change.deleted && !localKeys.has(keyOf(change.kind, change.id)),
+    )
     .map((change) => ({
       kind: change.kind,
       id: change.id,

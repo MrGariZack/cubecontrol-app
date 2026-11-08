@@ -140,27 +140,24 @@ export function LibraryDrawer({
   }
 
   async function loadIrToPedal(item: IrLibraryItem) {
-    if (irCabinet !== 8) {
-      const ok = window.confirm(
-        `RIESGO ALTO — ¿Cargar «${item.name}» en Cabinet ${irCabinet}?\n` +
-          `Puede pisar IR de fábrica. Backup local no es garantía absoluta.\n` +
-          `Prefiere Cab 8.`,
-      );
-      if (!ok) return;
-      // Electron does not support window.prompt().
-      const ok2 = window.confirm(
-        `ÚLTIMA CONFIRMACIÓN — ¿Sobreescribir Cab ${irCabinet} con «${item.name}» ahora?`,
-      );
-      if (!ok2) {
-        onStatus("Carga IR cancelada — segunda confirmación");
-        return;
-      }
+    const ok = window.confirm(
+      `RIESGO ALTO — ¿Cargar «${item.name}» en Cabinet ${irCabinet}?\n` +
+        `Se sobrescribirá el IR del gabinete seleccionado.`,
+    );
+    if (!ok) return;
+    // Electron does not support window.prompt().
+    const ok2 = window.confirm(
+      `ÚLTIMA CONFIRMACIÓN — ¿Sobreescribir Cab ${irCabinet} con «${item.name}» ahora?`,
+    );
+    if (!ok2) {
+      onStatus("Carga IR cancelada — segunda confirmación");
+      return;
     }
     onBusy(true);
     onError(null);
     try {
       const result = await window.tonehubDesktop.library.loadIrToPedal(item.id, irCabinet, {
-        confirmFactoryIrOverwrite: irCabinet !== 8,
+        confirmIrOverwrite: true,
         distance: irDistance,
       });
       onCabinetApplied(result.cabinet);
@@ -415,7 +412,7 @@ export function LibraryDrawer({
                   <div className="library-drawer__row-actions">
                     <button
                       type="button"
-                      disabled={busy}
+                      disabled={busy || irCabinet === 0}
                       onClick={() => void loadIrToPedal(item)}
                     >
                       → Pedal

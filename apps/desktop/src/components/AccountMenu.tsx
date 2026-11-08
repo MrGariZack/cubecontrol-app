@@ -60,6 +60,7 @@ export function AccountMenu() {
       <button
         type="button"
         className={`account-menu__btn${signedIn ? " is-on" : ""}`}
+        data-guide="account sync"
         aria-haspopup="dialog"
         aria-expanded={open}
         aria-label={signedIn ? (status?.email ?? t("account.aria")) : t("account.aria")}

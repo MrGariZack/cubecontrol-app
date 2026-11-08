@@ -1,7 +1,7 @@
 import { createHash, randomUUID } from "node:crypto";
 import { access, mkdir, readFile, readdir, rename, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
-import type { PresetSlotId } from "@tonehub/cube-baby-protocol";
+import { IR_ROM_SLOT_SIZE, LIVE_PARAM_NAMES, type PresetSlotId } from "@tonehub/cube-baby-protocol";
 import type {
   IrBackupItem,
   IrLibraryItem,
@@ -17,9 +17,23 @@ import type {
   SongLibraryItem,
 } from "./types.js";
 import { SHARE_FORMAT, parseSharePayload, type SharePayload } from "./shareFormat.js";
-import { LIVE_PARAM_NAMES } from "@tonehub/cube-baby-protocol";
 
 const INDEX_NAME = "index.json";
+
+/** App-generated identifiers and legacy filenames must stay a single path component. */
+function libraryPath(directory: string, name: string): string {
+  if (
+    typeof name !== "string" ||
+    name.length === 0 ||
+    name === "." ||
+    name === ".." ||
+    /[<>:"/\\|?*\x00-\x1f]|[. ]$/.test(name) ||
+    /^(?:con|prn|aux|nul|com[1-9¹²³]|lpt[1-9¹²³])(?:\.|$)/i.test(name)
+  ) {
+    throw new Error("Nombre de archivo de biblioteca inválido.");
+  }
+  return path.join(directory, name);
+}
 
 function emptyIndex(): LibraryIndex {
   return {
@@ -37,11 +51,27 @@ function nowIso(): string {
   return new Date().toISOString();
 }
 
+type PackInput = {
+  readonly name: string;
+  readonly notes?: string;
+  readonly presetIds: readonly string[];
+  readonly irIds: readonly string[];
+  readonly bankJson?: string;
+};
+
 export class LibraryStore {
   readonly root: string;
   readonly #userDataPath: string;
   #undo: LiveSnapshot[] = [];
   #redo: LiveSnapshot[] = [];
+  #initialization: Promise<void> | undefined;
+  #mutations: Promise<unknown> = Promise.resolve();
+
+  #mutate<T>(operation: () => Promise<T>): Promise<T> {
+    const run = this.#mutations.then(operation, operation);
+    this.#mutations = run.then(() => undefined, () => undefined);
+    return run;
+  }
 
   constructor(userDataPath: string) {
     this.#userDataPath = userDataPath;
@@ -67,7 +97,15 @@ export class LibraryStore {
     return path.join(this.root, "shows");
   }
 
-  async ensure(): Promise<void> {
+  ensure(): Promise<void> {
+    this.#initialization ??= this.#initialize().catch((error: unknown) => {
+      this.#initialization = undefined;
+      throw error;
+    });
+    return this.#initialization;
+  }
+
+  async #initialize(): Promise<void> {
     await this.#migrateLegacyToneHubFolder();
     await mkdir(this.presetsDir(), { recursive: true });
     await mkdir(this.irDir(), { recursive: true });
@@ -119,39 +157,43 @@ export class LibraryStore {
     readonly params: LiveParamsSnapshot;
     readonly id?: string;
   }): Promise<PresetLibraryItem> {
-    await this.ensure();
-    const index = await this.#readIndex();
-    const stamp = nowIso();
-    const id = input.id ?? randomUUID();
-    const existing = index.presets.find((item) => item.id === id);
-    const item: PresetLibraryItem = {
-      id,
-      kind: "preset",
-      name: input.name.trim() || "Preset sin nombre",
-      notes: input.notes?.trim() ?? "",
-      tags: [...(input.tags ?? [])],
-      profile: input.profile ?? "otro",
-      createdAt: existing?.createdAt ?? stamp,
-      updatedAt: stamp,
-      params: { ...input.params },
-    };
-    const next = {
-      ...index,
-      presets: existing
-        ? index.presets.map((p) => (p.id === id ? item : p))
-        : [item, ...index.presets],
-    };
-    await writeFile(path.join(this.presetsDir(), `${id}.json`), `${JSON.stringify(item, null, 2)}\n`);
-    await this.#writeIndex(next);
-    return item;
+    return this.#mutate(async () => {
+      await this.ensure();
+      const index = await this.#readIndex();
+      const stamp = nowIso();
+      const id = input.id ?? randomUUID();
+      const existing = index.presets.find((item) => item.id === id);
+      const item: PresetLibraryItem = {
+        id,
+        kind: "preset",
+        name: input.name.trim() || "Preset sin nombre",
+        notes: input.notes?.trim() ?? "",
+        tags: [...(input.tags ?? [])],
+        profile: input.profile ?? "otro",
+        createdAt: existing?.createdAt ?? stamp,
+        updatedAt: stamp,
+        params: { ...input.params },
+      };
+      const next = {
+        ...index,
+        presets: existing
+          ? index.presets.map((p) => (p.id === id ? item : p))
+          : [item, ...index.presets],
+      };
+      await writeFile(libraryPath(this.presetsDir(), `${id}.json`), `${JSON.stringify(item, null, 2)}\n`);
+      await this.#writeIndex(next);
+      return item;
+    });
   }
 
   async deletePreset(id: string): Promise<void> {
-    const index = await this.#readIndex();
-    await rm(path.join(this.presetsDir(), `${id}.json`), { force: true });
-    await this.#writeIndex({
-      ...index,
-      presets: index.presets.filter((item) => item.id !== id),
+    return this.#mutate(async () => {
+      const index = await this.#readIndex();
+      await rm(libraryPath(this.presetsDir(), `${id}.json`), { force: true });
+      await this.#writeIndex({
+        ...index,
+        presets: index.presets.filter((item) => item.id !== id),
+      });
     });
   }
 
@@ -162,43 +204,47 @@ export class LibraryStore {
     readonly profile?: LibraryProfile;
     readonly wav: Uint8Array;
   }): Promise<IrLibraryItem> {
-    await this.ensure();
-    const index = await this.#readIndex();
-    const id = randomUUID();
-    const stamp = nowIso();
-    const wavFile = `${id}.wav`;
-    await writeFile(path.join(this.irDir(), wavFile), input.wav);
-    const item: IrLibraryItem = {
-      id,
-      kind: "ir",
-      name: input.name.trim() || "IR sin nombre",
-      notes: input.notes?.trim() ?? "",
-      tags: [...(input.tags ?? [])],
-      profile: input.profile ?? "otro",
-      createdAt: stamp,
-      updatedAt: stamp,
-      wavFile,
-      byteLength: input.wav.byteLength,
-    };
-    await writeFile(path.join(this.irDir(), `${id}.json`), `${JSON.stringify(item, null, 2)}\n`);
-    await this.#writeIndex({ ...index, irs: [item, ...index.irs] });
-    return item;
+    return this.#mutate(async () => {
+      await this.ensure();
+      const index = await this.#readIndex();
+      const id = randomUUID();
+      const stamp = nowIso();
+      const wavFile = `${id}.wav`;
+      await writeFile(libraryPath(this.irDir(), wavFile), input.wav);
+      const item: IrLibraryItem = {
+        id,
+        kind: "ir",
+        name: input.name.trim() || "IR sin nombre",
+        notes: input.notes?.trim() ?? "",
+        tags: [...(input.tags ?? [])],
+        profile: input.profile ?? "otro",
+        createdAt: stamp,
+        updatedAt: stamp,
+        wavFile,
+        byteLength: input.wav.byteLength,
+      };
+      await writeFile(libraryPath(this.irDir(), `${id}.json`), `${JSON.stringify(item, null, 2)}\n`);
+      await this.#writeIndex({ ...index, irs: [item, ...index.irs] });
+      return item;
+    });
   }
 
   async readIrWav(id: string): Promise<Uint8Array> {
     const index = await this.#readIndex();
     const item = index.irs.find((ir) => ir.id === id);
     if (item === undefined) throw new Error(`IR ${id} no está en la biblioteca`);
-    return new Uint8Array(await readFile(path.join(this.irDir(), item.wavFile)));
+    return new Uint8Array(await readFile(libraryPath(this.irDir(), item.wavFile)));
   }
 
   async deleteIr(id: string): Promise<void> {
-    const index = await this.#readIndex();
-    const item = index.irs.find((ir) => ir.id === id);
-    if (item === undefined) return;
-    await rm(path.join(this.irDir(), item.wavFile), { force: true });
-    await rm(path.join(this.irDir(), `${id}.json`), { force: true });
-    await this.#writeIndex({ ...index, irs: index.irs.filter((ir) => ir.id !== id) });
+    return this.#mutate(async () => {
+      const index = await this.#readIndex();
+      const item = index.irs.find((ir) => ir.id === id);
+      if (item === undefined) return;
+      await rm(libraryPath(this.irDir(), item.wavFile), { force: true });
+      await rm(libraryPath(this.irDir(), `${id}.json`), { force: true });
+      await this.#writeIndex({ ...index, irs: index.irs.filter((ir) => ir.id !== id) });
+    });
   }
 
   async saveSong(input: {
@@ -214,54 +260,58 @@ export class LibraryStore {
     readonly delayNote?: "1/4" | "1/8" | "1/8d" | "1/16";
     readonly id?: string;
   }): Promise<SongLibraryItem> {
-    await this.ensure();
-    const index = await this.#readIndex();
-    if (!index.presets.some((p) => p.id === input.presetId)) {
-      throw new Error("El tono ligado a la canción no existe");
-    }
-    if (input.irId !== undefined && !index.irs.some((ir) => ir.id === input.irId)) {
-      throw new Error("El IR ligado a la canción no existe");
-    }
-    const stamp = nowIso();
-    const id = input.id ?? randomUUID();
-    const existing = index.songs.find((item) => item.id === id);
-    const item: SongLibraryItem = {
-      id,
-      kind: "song",
-      name: input.name.trim() || "Canción sin nombre",
-      notes: input.notes?.trim() ?? "",
-      tags: [...(input.tags ?? [])],
-      presetId: input.presetId,
-      ...(input.irId === undefined ? {} : { irId: input.irId }),
-      ...(input.irCabinet === undefined ? {} : { irCabinet: input.irCabinet }),
-      ...(input.irDistance === undefined ? {} : { irDistance: input.irDistance }),
-      ...(input.key === undefined || input.key.trim() === "" ? {} : { key: input.key.trim() }),
-      ...(input.bpm === undefined || !Number.isFinite(input.bpm) ? {} : { bpm: input.bpm }),
-      ...(input.delayNote === undefined ? {} : { delayNote: input.delayNote }),
-      createdAt: existing?.createdAt ?? stamp,
-      updatedAt: stamp,
-    };
-    const next = {
-      ...index,
-      songs: existing
-        ? index.songs.map((s) => (s.id === id ? item : s))
-        : [item, ...index.songs],
-    };
-    await writeFile(path.join(this.songsDir(), `${id}.json`), `${JSON.stringify(item, null, 2)}\n`);
-    await this.#writeIndex(next);
-    return item;
+    return this.#mutate(async () => {
+      await this.ensure();
+      const index = await this.#readIndex();
+      if (!index.presets.some((p) => p.id === input.presetId)) {
+        throw new Error("El tono ligado a la canción no existe");
+      }
+      if (input.irId !== undefined && !index.irs.some((ir) => ir.id === input.irId)) {
+        throw new Error("El IR ligado a la canción no existe");
+      }
+      const stamp = nowIso();
+      const id = input.id ?? randomUUID();
+      const existing = index.songs.find((item) => item.id === id);
+      const item: SongLibraryItem = {
+        id,
+        kind: "song",
+        name: input.name.trim() || "Canción sin nombre",
+        notes: input.notes?.trim() ?? "",
+        tags: [...(input.tags ?? [])],
+        presetId: input.presetId,
+        ...(input.irId === undefined ? {} : { irId: input.irId }),
+        ...(input.irCabinet === undefined ? {} : { irCabinet: input.irCabinet }),
+        ...(input.irDistance === undefined ? {} : { irDistance: input.irDistance }),
+        ...(input.key === undefined || input.key.trim() === "" ? {} : { key: input.key.trim() }),
+        ...(input.bpm === undefined || !Number.isFinite(input.bpm) ? {} : { bpm: input.bpm }),
+        ...(input.delayNote === undefined ? {} : { delayNote: input.delayNote }),
+        createdAt: existing?.createdAt ?? stamp,
+        updatedAt: stamp,
+      };
+      const next = {
+        ...index,
+        songs: existing
+          ? index.songs.map((s) => (s.id === id ? item : s))
+          : [item, ...index.songs],
+      };
+      await writeFile(libraryPath(this.songsDir(), `${id}.json`), `${JSON.stringify(item, null, 2)}\n`);
+      await this.#writeIndex(next);
+      return item;
+    });
   }
 
   async deleteSong(id: string): Promise<void> {
-    const index = await this.#readIndex();
-    await rm(path.join(this.songsDir(), `${id}.json`), { force: true });
-    await this.#writeIndex({
-      ...index,
-      songs: index.songs.filter((item) => item.id !== id),
-      shows: index.shows.map((show) => ({
-        ...show,
-        songIds: show.songIds.filter((songId) => songId !== id),
-      })),
+    return this.#mutate(async () => {
+      const index = await this.#readIndex();
+      await rm(libraryPath(this.songsDir(), `${id}.json`), { force: true });
+      await this.#writeIndex({
+        ...index,
+        songs: index.songs.filter((item) => item.id !== id),
+        shows: index.shows.map((show) => ({
+          ...show,
+          songIds: show.songIds.filter((songId) => songId !== id),
+        })),
+      });
     });
   }
 
@@ -271,39 +321,43 @@ export class LibraryStore {
     readonly songIds: readonly string[];
     readonly id?: string;
   }): Promise<ShowLibraryItem> {
-    await this.ensure();
-    const index = await this.#readIndex();
-    const stamp = nowIso();
-    const id = input.id ?? randomUUID();
-    const existing = index.shows.find((item) => item.id === id);
-    const known = new Set(index.songs.map((s) => s.id));
-    const songIds = input.songIds.filter((songId) => known.has(songId));
-    const item: ShowLibraryItem = {
-      id,
-      kind: "show",
-      name: input.name.trim() || "Show sin nombre",
-      notes: input.notes?.trim() ?? "",
-      songIds,
-      createdAt: existing?.createdAt ?? stamp,
-      updatedAt: stamp,
-    };
-    const next = {
-      ...index,
-      shows: existing
-        ? index.shows.map((s) => (s.id === id ? item : s))
-        : [item, ...index.shows],
-    };
-    await writeFile(path.join(this.showsDir(), `${id}.json`), `${JSON.stringify(item, null, 2)}\n`);
-    await this.#writeIndex(next);
-    return item;
+    return this.#mutate(async () => {
+      await this.ensure();
+      const index = await this.#readIndex();
+      const stamp = nowIso();
+      const id = input.id ?? randomUUID();
+      const existing = index.shows.find((item) => item.id === id);
+      const known = new Set(index.songs.map((s) => s.id));
+      const songIds = input.songIds.filter((songId) => known.has(songId));
+      const item: ShowLibraryItem = {
+        id,
+        kind: "show",
+        name: input.name.trim() || "Show sin nombre",
+        notes: input.notes?.trim() ?? "",
+        songIds,
+        createdAt: existing?.createdAt ?? stamp,
+        updatedAt: stamp,
+      };
+      const next = {
+        ...index,
+        shows: existing
+          ? index.shows.map((s) => (s.id === id ? item : s))
+          : [item, ...index.shows],
+      };
+      await writeFile(libraryPath(this.showsDir(), `${id}.json`), `${JSON.stringify(item, null, 2)}\n`);
+      await this.#writeIndex(next);
+      return item;
+    });
   }
 
   async deleteShow(id: string): Promise<void> {
-    const index = await this.#readIndex();
-    await rm(path.join(this.showsDir(), `${id}.json`), { force: true });
-    await this.#writeIndex({
-      ...index,
-      shows: index.shows.filter((item) => item.id !== id),
+    return this.#mutate(async () => {
+      const index = await this.#readIndex();
+      await rm(libraryPath(this.showsDir(), `${id}.json`), { force: true });
+      await this.#writeIndex({
+        ...index,
+        shows: index.shows.filter((item) => item.id !== id),
+      });
     });
   }
 
@@ -313,50 +367,56 @@ export class LibraryStore {
    * and no timestamp stamping — the sync engine owns the version.
    */
   async upsertPreset(item: PresetLibraryItem): Promise<void> {
-    await this.ensure();
-    const index = await this.#readIndex();
-    const exists = index.presets.some((preset) => preset.id === item.id);
-    await writeFile(
-      path.join(this.presetsDir(), `${item.id}.json`),
-      `${JSON.stringify(item, null, 2)}\n`,
-    );
-    await this.#writeIndex({
-      ...index,
-      presets: exists
-        ? index.presets.map((preset) => (preset.id === item.id ? item : preset))
-        : [item, ...index.presets],
+    return this.#mutate(async () => {
+      await this.ensure();
+      const index = await this.#readIndex();
+      const exists = index.presets.some((preset) => preset.id === item.id);
+      await writeFile(
+        libraryPath(this.presetsDir(), `${item.id}.json`),
+        `${JSON.stringify(item, null, 2)}\n`,
+      );
+      await this.#writeIndex({
+        ...index,
+        presets: exists
+          ? index.presets.map((preset) => (preset.id === item.id ? item : preset))
+          : [item, ...index.presets],
+      });
     });
   }
 
   async upsertSong(item: SongLibraryItem): Promise<void> {
-    await this.ensure();
-    const index = await this.#readIndex();
-    const exists = index.songs.some((song) => song.id === item.id);
-    await writeFile(
-      path.join(this.songsDir(), `${item.id}.json`),
-      `${JSON.stringify(item, null, 2)}\n`,
-    );
-    await this.#writeIndex({
-      ...index,
-      songs: exists
-        ? index.songs.map((song) => (song.id === item.id ? item : song))
-        : [item, ...index.songs],
+    return this.#mutate(async () => {
+      await this.ensure();
+      const index = await this.#readIndex();
+      const exists = index.songs.some((song) => song.id === item.id);
+      await writeFile(
+        libraryPath(this.songsDir(), `${item.id}.json`),
+        `${JSON.stringify(item, null, 2)}\n`,
+      );
+      await this.#writeIndex({
+        ...index,
+        songs: exists
+          ? index.songs.map((song) => (song.id === item.id ? item : song))
+          : [item, ...index.songs],
+      });
     });
   }
 
   async upsertShow(item: ShowLibraryItem): Promise<void> {
-    await this.ensure();
-    const index = await this.#readIndex();
-    const exists = index.shows.some((show) => show.id === item.id);
-    await writeFile(
-      path.join(this.showsDir(), `${item.id}.json`),
-      `${JSON.stringify(item, null, 2)}\n`,
-    );
-    await this.#writeIndex({
-      ...index,
-      shows: exists
-        ? index.shows.map((show) => (show.id === item.id ? item : show))
-        : [item, ...index.shows],
+    return this.#mutate(async () => {
+      await this.ensure();
+      const index = await this.#readIndex();
+      const exists = index.shows.some((show) => show.id === item.id);
+      await writeFile(
+        libraryPath(this.showsDir(), `${item.id}.json`),
+        `${JSON.stringify(item, null, 2)}\n`,
+      );
+      await this.#writeIndex({
+        ...index,
+        shows: exists
+          ? index.shows.map((show) => (show.id === item.id ? item : show))
+          : [item, ...index.shows],
+      });
     });
   }
 
@@ -375,22 +435,24 @@ export class LibraryStore {
       readonly updatedAt: string;
     },
   ): Promise<void> {
-    const index = await this.#readIndex();
-    const existing = index.irs.find((ir) => ir.id === id);
-    if (existing === undefined) return;
-    const item: IrLibraryItem = {
-      ...existing,
-      name: meta.name,
-      notes: meta.notes,
-      tags: [...meta.tags],
-      profile: meta.profile,
-      ...(meta.byteLength === undefined ? {} : { byteLength: meta.byteLength }),
-      updatedAt: meta.updatedAt,
-    };
-    await writeFile(path.join(this.irDir(), `${id}.json`), `${JSON.stringify(item, null, 2)}\n`);
-    await this.#writeIndex({
-      ...index,
-      irs: index.irs.map((ir) => (ir.id === id ? item : ir)),
+    return this.#mutate(async () => {
+      const index = await this.#readIndex();
+      const existing = index.irs.find((ir) => ir.id === id);
+      if (existing === undefined) return;
+      const item: IrLibraryItem = {
+        ...existing,
+        name: meta.name,
+        notes: meta.notes,
+        tags: [...meta.tags],
+        profile: meta.profile,
+        ...(meta.byteLength === undefined ? {} : { byteLength: meta.byteLength }),
+        updatedAt: meta.updatedAt,
+      };
+      await writeFile(libraryPath(this.irDir(), `${id}.json`), `${JSON.stringify(item, null, 2)}\n`);
+      await this.#writeIndex({
+        ...index,
+        irs: index.irs.map((ir) => (ir.id === id ? item : ir)),
+      });
     });
   }
 
@@ -421,38 +483,47 @@ export class LibraryStore {
     readonly sector: Uint8Array;
     readonly sourceName?: string;
   }): Promise<IrBackupItem> {
-    await this.ensure();
-    const index = await this.#readIndex();
-    const id = randomUUID();
-    const stamp = nowIso();
-    const binFile = `cab${input.cabinet}-rom${input.romSlot}-${stamp.replace(/[:.]/g, "")}-${id.slice(0, 8)}.bin`;
-    await writeFile(path.join(this.historyIrDir(), binFile), input.sector);
-    const item: IrBackupItem = {
-      id,
-      kind: "ir-backup",
-      cabinet: input.cabinet,
-      romSlot: input.romSlot,
-      createdAt: stamp,
-      binFile,
-      ...(input.sourceName ? { sourceName: input.sourceName } : {}),
-    };
-    const irBackups = [item, ...index.irBackups].slice(0, 40);
-    // prune files not in index
-    const keep = new Set(irBackups.map((b) => b.binFile));
-    for (const old of index.irBackups) {
-      if (!keep.has(old.binFile)) {
-        await rm(path.join(this.historyIrDir(), old.binFile), { force: true });
+    return this.#mutate(async () => {
+      if (input.sector.byteLength !== IR_ROM_SLOT_SIZE) {
+        throw new Error("El respaldo del sector IR está incompleto.");
       }
-    }
-    await this.#writeIndex({ ...index, irBackups });
-    return item;
+      await this.ensure();
+      const index = await this.#readIndex();
+      const id = randomUUID();
+      const stamp = nowIso();
+      const binFile = `cab${input.cabinet}-rom${input.romSlot}-${stamp.replace(/[:.]/g, "")}-${id.slice(0, 8)}.bin`;
+      const backupPath = libraryPath(this.historyIrDir(), binFile);
+      await writeFile(backupPath, input.sector, { flag: "wx", flush: true });
+      if (!(await readFile(backupPath)).equals(input.sector)) {
+        throw new Error("El respaldo del IR no coincide con el sector leído.");
+      }
+      const item: IrBackupItem = {
+        id,
+        kind: "ir-backup",
+        cabinet: input.cabinet,
+        romSlot: input.romSlot,
+        createdAt: stamp,
+        binFile,
+        ...(input.sourceName ? { sourceName: input.sourceName } : {}),
+      };
+      const irBackups = [item, ...index.irBackups].slice(0, 40);
+      await this.#writeIndex({ ...index, irBackups });
+      // Only prune old files after the new index is durable.
+      const keep = new Set(irBackups.map((b) => b.binFile));
+      for (const old of index.irBackups) {
+        if (!keep.has(old.binFile)) {
+          await rm(libraryPath(this.historyIrDir(), old.binFile), { force: true });
+        }
+      }
+      return item;
+    });
   }
 
   async readIrBackup(id: string): Promise<Uint8Array> {
     const index = await this.#readIndex();
     const item = index.irBackups.find((b) => b.id === id);
     if (item === undefined) throw new Error(`backup IR ${id} no encontrado`);
-    return new Uint8Array(await readFile(path.join(this.historyIrDir(), item.binFile)));
+    return new Uint8Array(await readFile(libraryPath(this.historyIrDir(), item.binFile)));
   }
 
   pushUndo(snapshot: Omit<LiveSnapshot, "id" | "createdAt"> & { readonly id?: string }): void {
@@ -529,18 +600,16 @@ export class LibraryStore {
     });
   }
 
-  async createPack(input: {
-    readonly name: string;
-    readonly notes?: string;
-    readonly presetIds: readonly string[];
-    readonly irIds: readonly string[];
-    readonly bankJson?: string;
-  }): Promise<PackLibraryItem> {
+  createPack(input: PackInput): Promise<PackLibraryItem> {
+    return this.#mutate(() => this.#createPack(input));
+  }
+
+  async #createPack(input: PackInput): Promise<PackLibraryItem> {
     await this.ensure();
     const index = await this.#readIndex();
     const id = randomUUID();
     const stamp = nowIso();
-    const packDir = path.join(this.packsDir(), id);
+    const packDir = libraryPath(this.packsDir(), id);
     await mkdir(packDir, { recursive: true });
     await mkdir(path.join(packDir, "presets"), { recursive: true });
     await mkdir(path.join(packDir, "ir"), { recursive: true });
@@ -549,7 +618,7 @@ export class LibraryStore {
       const preset = index.presets.find((p) => p.id === presetId);
       if (preset === undefined) continue;
       await writeFile(
-        path.join(packDir, "presets", `${presetId}.json`),
+        libraryPath(path.join(packDir, "presets"), `${presetId}.json`),
         `${JSON.stringify(preset, null, 2)}\n`,
       );
     }
@@ -557,12 +626,12 @@ export class LibraryStore {
       const ir = index.irs.find((item) => item.id === irId);
       if (ir === undefined) continue;
       await writeFile(
-        path.join(packDir, "ir", `${irId}.json`),
+        libraryPath(path.join(packDir, "ir"), `${irId}.json`),
         `${JSON.stringify(ir, null, 2)}\n`,
       );
       await writeFile(
-        path.join(packDir, "ir", ir.wavFile),
-        await readFile(path.join(this.irDir(), ir.wavFile)),
+        libraryPath(path.join(packDir, "ir"), ir.wavFile),
+        await readFile(libraryPath(this.irDir(), ir.wavFile)),
       );
     }
     if (input.bankJson !== undefined) {
@@ -597,7 +666,7 @@ export class LibraryStore {
 
   async exportPackZip(packId: string, destZipPath: string): Promise<string> {
     const JSZip = (await import("jszip")).default;
-    const packDir = path.join(this.packsDir(), packId);
+    const packDir = libraryPath(this.packsDir(), packId);
     const zip = new JSZip();
     await this.#addDirToZip(zip, packDir, "");
     const buffer = await zip.generateAsync({ type: "nodebuffer", compression: "DEFLATE" });
@@ -606,72 +675,74 @@ export class LibraryStore {
   }
 
   async importPackZip(zipBytes: Uint8Array): Promise<PackLibraryItem> {
-    const JSZip = (await import("jszip")).default;
-    const zip = await JSZip.loadAsync(zipBytes);
-    const manifestFile = zip.file("manifest.json");
-    if (manifestFile === null) throw new Error("pack inválido: falta manifest.json");
-    const manifest = JSON.parse(await manifestFile.async("string")) as PackManifest;
-    if (manifest.format !== "tonehub-pack-v1") throw new Error("formato de pack no soportado");
+    return this.#mutate(async () => {
+      const JSZip = (await import("jszip")).default;
+      const zip = await JSZip.loadAsync(zipBytes);
+      const manifestFile = zip.file("manifest.json");
+      if (manifestFile === null) throw new Error("pack inválido: falta manifest.json");
+      const manifest = JSON.parse(await manifestFile.async("string")) as PackManifest;
+      if (manifest.format !== "tonehub-pack-v1") throw new Error("formato de pack no soportado");
 
-    await this.ensure();
-    const index = await this.#readIndex();
-    const importedPresetIds: string[] = [];
-    const importedIrIds: string[] = [];
+      await this.ensure();
+      const index = await this.#readIndex();
+      const importedPresetIds: string[] = [];
+      const importedIrIds: string[] = [];
 
-    for (const presetId of manifest.presetIds) {
-      const file = zip.file(`presets/${presetId}.json`);
-      if (file === null) continue;
-      const preset = JSON.parse(await file.async("string")) as PresetLibraryItem;
-      const newId = randomUUID();
-      const item: PresetLibraryItem = {
-        ...preset,
-        id: newId,
-        createdAt: nowIso(),
-        updatedAt: nowIso(),
-      };
-      await writeFile(
-        path.join(this.presetsDir(), `${newId}.json`),
-        `${JSON.stringify(item, null, 2)}\n`,
-      );
-      index.presets.unshift(item);
-      importedPresetIds.push(newId);
-    }
+      for (const presetId of manifest.presetIds) {
+        const file = zip.file(`presets/${presetId}.json`);
+        if (file === null) continue;
+        const preset = JSON.parse(await file.async("string")) as PresetLibraryItem;
+        const newId = randomUUID();
+        const item: PresetLibraryItem = {
+          ...preset,
+          id: newId,
+          createdAt: nowIso(),
+          updatedAt: nowIso(),
+        };
+        await writeFile(
+          libraryPath(this.presetsDir(), `${newId}.json`),
+          `${JSON.stringify(item, null, 2)}\n`,
+        );
+        index.presets.unshift(item);
+        importedPresetIds.push(newId);
+      }
 
-    for (const irId of manifest.irIds) {
-      const metaFile = zip.file(`ir/${irId}.json`);
-      if (metaFile === null) continue;
-      const meta = JSON.parse(await metaFile.async("string")) as IrLibraryItem;
-      const wavFile = zip.file(`ir/${meta.wavFile}`);
-      if (wavFile === null) continue;
-      const newId = randomUUID();
-      const wavName = `${newId}.wav`;
-      const wav = new Uint8Array(await wavFile.async("uint8array"));
-      await writeFile(path.join(this.irDir(), wavName), wav);
-      const item: IrLibraryItem = {
-        ...meta,
-        id: newId,
-        wavFile: wavName,
-        byteLength: wav.byteLength,
-        createdAt: nowIso(),
-        updatedAt: nowIso(),
-      };
-      await writeFile(path.join(this.irDir(), `${newId}.json`), `${JSON.stringify(item, null, 2)}\n`);
-      index.irs.unshift(item);
-      importedIrIds.push(newId);
-    }
+      for (const irId of manifest.irIds) {
+        const metaFile = zip.file(`ir/${irId}.json`);
+        if (metaFile === null) continue;
+        const meta = JSON.parse(await metaFile.async("string")) as IrLibraryItem;
+        const wavFile = zip.file(`ir/${meta.wavFile}`);
+        if (wavFile === null) continue;
+        const newId = randomUUID();
+        const wavName = `${newId}.wav`;
+        const wav = new Uint8Array(await wavFile.async("uint8array"));
+        await writeFile(libraryPath(this.irDir(), wavName), wav);
+        const item: IrLibraryItem = {
+          ...meta,
+          id: newId,
+          wavFile: wavName,
+          byteLength: wav.byteLength,
+          createdAt: nowIso(),
+          updatedAt: nowIso(),
+        };
+        await writeFile(libraryPath(this.irDir(), `${newId}.json`), `${JSON.stringify(item, null, 2)}\n`);
+        index.irs.unshift(item);
+        importedIrIds.push(newId);
+      }
 
-    let bankJson: string | undefined;
-    const bankFile = zip.file("bank.json");
-    if (bankFile !== null) bankJson = await bankFile.async("string");
+      let bankJson: string | undefined;
+      const bankFile = zip.file("bank.json");
+      if (bankFile !== null) bankJson = await bankFile.async("string");
 
-    // Persist imported presets/IRs first; createPack re-reads the index.
-    await this.#writeIndex(index);
-    return this.createPack({
-      name: `${manifest.name} (import)`,
-      notes: manifest.notes,
-      presetIds: importedPresetIds,
-      irIds: importedIrIds,
-      ...(bankJson === undefined ? {} : { bankJson }),
+      // Persist imported presets/IRs first; createPack re-reads the index.
+      await this.#writeIndex(index);
+      return this.#createPack({
+        name: `${manifest.name} (import)`,
+        notes: manifest.notes,
+        presetIds: importedPresetIds,
+        irIds: importedIrIds,
+        ...(bankJson === undefined ? {} : { bankJson }),
+      });
     });
   }
 
@@ -780,83 +851,85 @@ export class LibraryStore {
     readonly songs: number;
     readonly shows: number;
   }> {
-    await this.ensure();
-    const parsed = parseSharePayload(payload);
-    if (parsed === null) throw new Error("archivo CubeControl no reconocido");
-    const stamp = nowIso();
-    const index = await this.#readIndex();
-    const presets: PresetLibraryItem[] = [];
-    for (const preset of parsed.presets) {
-      const id = randomUUID();
-      const item: PresetLibraryItem = {
-        id,
-        kind: "preset",
-        name: preset.name,
-        notes: preset.notes,
-        tags: [...preset.tags],
-        profile: preset.profile,
-        params: preset.params as LiveParamsSnapshot,
-        createdAt: stamp,
-        updatedAt: stamp,
+    return this.#mutate(async () => {
+      await this.ensure();
+      const parsed = parseSharePayload(payload);
+      if (parsed === null) throw new Error("archivo CubeControl no reconocido");
+      const stamp = nowIso();
+      const index = await this.#readIndex();
+      const presets: PresetLibraryItem[] = [];
+      for (const preset of parsed.presets) {
+        const id = randomUUID();
+        const item: PresetLibraryItem = {
+          id,
+          kind: "preset",
+          name: preset.name,
+          notes: preset.notes,
+          tags: [...preset.tags],
+          profile: preset.profile,
+          params: preset.params as LiveParamsSnapshot,
+          createdAt: stamp,
+          updatedAt: stamp,
+        };
+        await writeFile(
+          libraryPath(this.presetsDir(), `${id}.json`),
+          `${JSON.stringify(item, null, 2)}\n`,
+        );
+        presets.push(item);
+        index.presets.unshift(item);
+      }
+      const songs: SongLibraryItem[] = [];
+      for (const song of parsed.songs) {
+        const id = randomUUID();
+        const presetId = presets[song.presetIndex]?.id ?? presets[0]!.id;
+        const item: SongLibraryItem = {
+          id,
+          kind: "song",
+          name: song.name,
+          notes: song.notes,
+          tags: [...song.tags],
+          presetId,
+          ...(song.bpm !== undefined ? { bpm: song.bpm } : {}),
+          ...(song.delayNote === "1/4" ||
+          song.delayNote === "1/8" ||
+          song.delayNote === "1/8d" ||
+          song.delayNote === "1/16"
+            ? { delayNote: song.delayNote }
+            : {}),
+          ...(song.key ? { key: song.key } : {}),
+          createdAt: stamp,
+          updatedAt: stamp,
+        };
+        await writeFile(libraryPath(this.songsDir(), `${id}.json`), `${JSON.stringify(item, null, 2)}\n`);
+        songs.push(item);
+        index.songs.unshift(item);
+      }
+      const shows: ShowLibraryItem[] = [];
+      for (const show of parsed.shows) {
+        const id = randomUUID();
+        const item: ShowLibraryItem = {
+          id,
+          kind: "show",
+          name: show.name,
+          notes: show.notes,
+          songIds: show.songIndexes
+            .map((songIndex) => songs[songIndex]?.id)
+            .filter((songId): songId is string => typeof songId === "string"),
+          createdAt: stamp,
+          updatedAt: stamp,
+        };
+        await writeFile(libraryPath(this.showsDir(), `${id}.json`), `${JSON.stringify(item, null, 2)}\n`);
+        shows.push(item);
+        index.shows.unshift(item);
+      }
+      await this.#writeIndex(index);
+      return {
+        name: parsed.name,
+        presets: presets.length,
+        songs: songs.length,
+        shows: shows.length,
       };
-      await writeFile(
-        path.join(this.presetsDir(), `${id}.json`),
-        `${JSON.stringify(item, null, 2)}\n`,
-      );
-      presets.push(item);
-      index.presets.unshift(item);
-    }
-    const songs: SongLibraryItem[] = [];
-    for (const song of parsed.songs) {
-      const id = randomUUID();
-      const presetId = presets[song.presetIndex]?.id ?? presets[0]!.id;
-      const item: SongLibraryItem = {
-        id,
-        kind: "song",
-        name: song.name,
-        notes: song.notes,
-        tags: [...song.tags],
-        presetId,
-        ...(song.bpm !== undefined ? { bpm: song.bpm } : {}),
-        ...(song.delayNote === "1/4" ||
-        song.delayNote === "1/8" ||
-        song.delayNote === "1/8d" ||
-        song.delayNote === "1/16"
-          ? { delayNote: song.delayNote }
-          : {}),
-        ...(song.key ? { key: song.key } : {}),
-        createdAt: stamp,
-        updatedAt: stamp,
-      };
-      await writeFile(path.join(this.songsDir(), `${id}.json`), `${JSON.stringify(item, null, 2)}\n`);
-      songs.push(item);
-      index.songs.unshift(item);
-    }
-    const shows: ShowLibraryItem[] = [];
-    for (const show of parsed.shows) {
-      const id = randomUUID();
-      const item: ShowLibraryItem = {
-        id,
-        kind: "show",
-        name: show.name,
-        notes: show.notes,
-        songIds: show.songIndexes
-          .map((songIndex) => songs[songIndex]?.id)
-          .filter((songId): songId is string => typeof songId === "string"),
-        createdAt: stamp,
-        updatedAt: stamp,
-      };
-      await writeFile(path.join(this.showsDir(), `${id}.json`), `${JSON.stringify(item, null, 2)}\n`);
-      shows.push(item);
-      index.shows.unshift(item);
-    }
-    await this.#writeIndex(index);
-    return {
-      name: parsed.name,
-      presets: presets.length,
-      songs: songs.length,
-      shows: shows.length,
-    };
+    });
   }
 
   libraryFingerprint(): string {
@@ -894,6 +967,13 @@ export class LibraryStore {
   }
 
   async #writeIndex(index: LibraryIndex): Promise<void> {
-    await writeFile(path.join(this.root, INDEX_NAME), `${JSON.stringify(index, null, 2)}\n`, "utf8");
+    const destination = path.join(this.root, INDEX_NAME);
+    const temp = path.join(this.root, `.${INDEX_NAME}.${randomUUID()}.tmp`);
+    try {
+      await writeFile(temp, `${JSON.stringify(index, null, 2)}\n`, { encoding: "utf8", flush: true });
+      await rename(temp, destination);
+    } finally {
+      await rm(temp, { force: true });
+    }
   }
 }

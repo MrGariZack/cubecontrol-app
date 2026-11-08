@@ -84,7 +84,7 @@ export function DelayTapBar({
   }
 
   return (
-    <section className="delay-tap" aria-label={t("groove.aria")}>
+    <section className="delay-tap" data-guide="tap division" aria-label={t("groove.aria")}>
       <div className="delay-tap__row">
         <label className="delay-tap__field">
           {t("groove.bpm")}

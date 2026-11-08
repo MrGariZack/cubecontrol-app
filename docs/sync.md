@@ -17,6 +17,8 @@ Cada ítem tiene un `id`. Mismo id = el mismo tono/canción/show.
 - `updatedAt` más nuevo en la nube → se baja y pisa el local.
 - Id nuevo → se agrega.
 - Borrado local → tombstone (`deleted_at`).
+- Un registro de IR sin WAV local no se registra como archivo descargado. Un borrado
+  remoto de metadatos de IR conserva las copias del WAV que existan en otros equipos.
 
 No se fusionan knobs. No se unen tonos por nombre en el sync de todos los días.
 
@@ -25,8 +27,9 @@ No se fusionan knobs. No se unen tonos por nombre en el sync de todos los días.
 Si este aparato **nunca** sincronizó (`cursor` vacío) y **los dos lados tienen
 datos**, no se mezcla a ciegas. La UI pide:
 
-- **Usar la nube** — el local se alinea al servidor (ítems solo-locales se van).
-- **Subir este dispositivo** — la nube pasa a ser esta library.
+- **Usar la nube** — los tonos, canciones y shows locales se alinean con el servidor. Los WAV locales y sus entradas de IR se conservan.
+- **Subir este dispositivo** — la nube se alinea a esta library y conserva los metadatos
+  de IR que solo estén en la nube.
 - **Cancelar**.
 
 Si hay presets con **mismo nombre y mismos knobs** pero distinto id (nacidos

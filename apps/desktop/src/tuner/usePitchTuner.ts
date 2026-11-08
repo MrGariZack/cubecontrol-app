@@ -26,11 +26,13 @@ export function usePitchTuner(options: {
   readonly range: TunerRange;
 }) {
   const { active, a4, range } = options;
+  const [requested, setRequested] = useState(false);
   const [listening, setListening] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [reading, setReading] = useState<TunerReading | null>(null);
   const [devices, setDevices] = useState<MediaDeviceInfo[]>([]);
   const [deviceId, setDeviceId] = useState<string>("");
+  const captureId = useRef(0);
 
   const audioRef = useRef<{
     context: AudioContext;
@@ -50,7 +52,8 @@ export function usePitchTuner(options: {
   a4Ref.current = a4;
   rangeRef.current = range;
 
-  const stop = useCallback(() => {
+  const release = useCallback(() => {
+    captureId.current += 1;
     const audio = audioRef.current;
     if (audio === null) {
       setListening(false);
@@ -62,7 +65,7 @@ export function usePitchTuner(options: {
     audio.lowpass.disconnect();
     audio.analyser.disconnect();
     for (const track of audio.stream.getTracks()) track.stop();
-    void audio.context.close();
+    void audio.context.close().catch(() => undefined);
     audioRef.current = null;
     setListening(false);
     setReading(null);
@@ -79,8 +82,10 @@ export function usePitchTuner(options: {
     });
   }, []);
 
-  const start = useCallback(async () => {
-    stop();
+  const openCapture = useCallback(async () => {
+    const request = ++captureId.current;
+    let stream: MediaStream | undefined;
+    let context: AudioContext | undefined;
     setError(null);
     try {
       if (!navigator.mediaDevices?.getUserMedia) {
@@ -97,8 +102,12 @@ export function usePitchTuner(options: {
         audioConstraints.deviceId = { exact: deviceId };
       }
 
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: audioConstraints });
-      const context = new AudioContext();
+      stream = await navigator.mediaDevices.getUserMedia({ audio: audioConstraints });
+      if (request !== captureId.current) {
+        stream.getTracks().forEach((track) => track.stop());
+        return;
+      }
+      context = new AudioContext();
       const source = context.createMediaStreamSource(stream);
 
       const bounds = RANGES[rangeRef.current];
@@ -171,37 +180,43 @@ export function usePitchTuner(options: {
       };
 
       if (context.state === "suspended") await context.resume();
+      if (request !== captureId.current) return;
       audio.raf = requestAnimationFrame(tick);
       setListening(true);
-      await refreshDevices();
+      void refreshDevices().catch(() => undefined);
     } catch (err) {
+      if (request !== captureId.current) return;
+      if (audioRef.current) release();
+      else {
+        stream?.getTracks().forEach((track) => track.stop());
+        if (context) void context.close().catch(() => undefined);
+      }
       setError(err instanceof Error ? err.message : String(err));
+      setRequested(false);
       setListening(false);
     }
-  }, [deviceId, refreshDevices, stop]);
+  }, [deviceId, refreshDevices, release]);
 
   useEffect(() => {
-    if (!active) {
-      stop();
-      return;
-    }
-    void start();
-    return () => stop();
-  }, [active, deviceId, range, start, stop]);
+    if (!active || !requested) return;
+    void openCapture();
+    return release;
+  }, [active, requested, range, openCapture, release]);
 
   useEffect(() => {
-    void refreshDevices();
+    void refreshDevices().catch(() => undefined);
   }, [refreshDevices]);
 
   return {
     listening,
+    requested,
     error,
     reading,
     devices,
     deviceId,
     setDeviceId,
-    start,
-    stop,
+    start: () => setRequested(true),
+    stop: () => setRequested(false),
     refreshDevices,
   };
 }

@@ -40,7 +40,11 @@ export function computeLocalChanges(
     const key = keyOf(record);
     seen.add(key);
     const entry = entries[key];
-    nextEntries[key] = { updatedAt: record.updatedAt, deleted: false };
+    nextEntries[key] = {
+      updatedAt: record.updatedAt,
+      deleted: false,
+      ...(record.kind === "ir" ? { hadLocalIr: true } : {}),
+    };
     if (entry === undefined || entry.deleted || entry.updatedAt !== record.updatedAt) {
       changes.push({
         kind: record.kind,
@@ -60,6 +64,7 @@ export function computeLocalChanges(
     }
     // Present in the fingerprint but no longer local → tombstone.
     const [kind, id] = splitKey(key);
+    if (kind === "ir" && entry.hadLocalIr !== true) continue;
     nextEntries[key] = { updatedAt: now, deleted: true };
     changes.push({ kind, id, updatedAt: now, deleted: true });
   }
@@ -80,9 +85,9 @@ export interface RemoteApplication {
 
 /**
  * Decide which pulled (server-authoritative) changes must be applied locally.
- * A remote change wins only when its `updatedAt` is strictly newer than the
- * local record (or the record is absent locally). `baseEntries` is the
- * optimistic post-push fingerprint; pulled changes override their own key.
+ * Newer edits win. A tombstone takes precedence over an edit at the same
+ * timestamp. IR records describe local files, so cloud-only metadata and
+ * remote deletions cannot create or remove a WAV.
  */
 export function computeRemoteApplication(
   changes: readonly SyncChange[],
@@ -96,19 +101,34 @@ export function computeRemoteApplication(
 
   for (const change of changes) {
     const key = fingerprintKey(change.kind, change.id);
-    nextEntries[key] = { updatedAt: change.updatedAt, deleted: change.deleted };
-
     const record = local.get(key);
-    const localVersion = record?.updatedAt ?? baseEntries[key]?.updatedAt ?? null;
+    const localEntry = baseEntries[key];
+    const localVersion = record?.updatedAt ?? localEntry?.updatedAt;
+    if (localVersion !== undefined && change.updatedAt < localVersion) continue;
+    if (
+      record === undefined &&
+      localEntry?.deleted &&
+      change.updatedAt === localVersion &&
+      !change.deleted
+    ) {
+      continue;
+    }
+
+    if (change.kind === "ir") {
+      if (record === undefined || change.deleted) continue;
+      nextEntries[key] = { updatedAt: change.updatedAt, deleted: false, hadLocalIr: true };
+    } else {
+      nextEntries[key] = { updatedAt: change.updatedAt, deleted: change.deleted };
+    }
 
     if (change.deleted) {
-      if (record !== undefined && (localVersion === null || change.updatedAt > localVersion)) {
+      if (record !== undefined) {
         applyDeletes.push({ kind: change.kind, id: change.id });
       }
       continue;
     }
 
-    if (record === undefined || localVersion === null || change.updatedAt > localVersion) {
+    if (record === undefined || change.updatedAt > record.updatedAt) {
       applyUpserts.push(change.record);
     }
   }

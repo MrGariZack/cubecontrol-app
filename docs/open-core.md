@@ -28,7 +28,7 @@ Alineado con la licencia actual del desktop ([`LICENSE.txt`](../apps/desktop/LIC
 | CubeControl desktop local | `tonehub-app` | Editor, tuner, Device, Library **offline** |
 | Shows / canciones / tonos **en disco** | Library local | Sin cuenta |
 | Armar A/B/C, modo escenario **local** | Desktop | USB en esa máquina |
-| Backup IR local + SAFETY gates | Desktop | Cab 8 preferido |
+| Backup IR local + SAFETY gates | Desktop | Respaldo y verificación en cualquier gabinete |
 
 **Principio:** si funciona **solo con el PC y el pedal**, debe poder seguir siendo open.
 
@@ -81,7 +81,7 @@ No abrir cuentas hasta que:
 
 1. Flujo tono → canción → show → armar A/B/C sea usable por un desconocido en &lt;10 min  
 2. Hay smoke de desktop + builds Windows para testers  
-3. SAFETY y Cab 8 están claros en UI y README  
+3. Los riesgos de escritura y el respaldo de IR están claros en UI y README.
 
 Luego: **MVP sync library** (sin marketplace).
 

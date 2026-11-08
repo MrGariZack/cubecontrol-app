@@ -46,6 +46,7 @@ export function StudioToolbar({
           className="studio-toolbar__btn"
           disabled={busy || !hasPedal || !canUndo}
           onClick={onUndo}
+          data-guide="history"
           title={t("toolbar.undo")}
         >
           {t("toolbar.undo")}
@@ -65,6 +66,7 @@ export function StudioToolbar({
           className="studio-toolbar__btn studio-toolbar__btn--primary"
           disabled={busy || !hasPedal}
           onClick={onSave}
+          data-guide="store"
         >
           {t("toolbar.saveSlot", { slot: activeSlot })}
         </button>

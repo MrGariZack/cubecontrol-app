@@ -22,7 +22,7 @@
   font-size: 12px;
   font-weight: 600;
   padding: 6px 10px;
-  border-radius: 8px;
+  border-radius: var(--radius-control);
   border: 1px solid var(--line);
   background: rgba(0, 0, 0, 0.28);
   color: var(--ink, #eef2f6);

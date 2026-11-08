@@ -71,7 +71,7 @@ export function TunerPanel({ active }: TunerPanelProps) {
           <h2 className="tuner__title">Tuner</h2>
           <p className="tuner__sub">{t("tuner.subtitle")}</p>
         </div>
-        <div className="tuner__modes" role="tablist" aria-label={t("tuner.mode")}>
+        <div className="tuner__modes" data-guide="tuner-modes" role="tablist" aria-label={t("tuner.mode")}>
           {modeTabs.map(([id, label]) => (
             <button
               key={id}
@@ -87,7 +87,7 @@ export function TunerPanel({ active }: TunerPanelProps) {
         </div>
       </header>
 
-      <div className="tuner__controls">
+      <div className="tuner__controls" data-guide="tuner-input">
         <label className="tuner__field">
           <span>{t("tuner.input")}</span>
           <select
@@ -130,11 +130,11 @@ export function TunerPanel({ active }: TunerPanelProps) {
           type="button"
           className={tuner.listening ? "tuner__listen is-on" : "tuner__listen"}
           onClick={() => {
-            if (tuner.listening) tuner.stop();
-            else void tuner.start();
+            if (tuner.requested) tuner.stop();
+            else tuner.start();
           }}
         >
-          {tuner.listening ? t("tuner.listening") : t("tuner.startMic")}
+          {tuner.requested ? t("tuner.stopMic") : t("tuner.startMic")}
         </button>
       </div>
 

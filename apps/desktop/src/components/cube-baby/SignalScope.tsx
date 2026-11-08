@@ -36,8 +36,8 @@ const TOUCH_LEVEL = 0.3;
  */
 export function SignalScope({ active = true }: SignalScopeProps) {
   const { t, locale } = useI18n();
-  const [enabled, setEnabled] = useState(true);
-  const [play, setPlay] = useState(true);
+  const [enabled, setEnabled] = useState(false);
+  const [play, setPlay] = useState(false);
   const [laps, setLaps] = useState(0);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const peaksRef = useRef<Float32Array | null>(null);
@@ -339,7 +339,7 @@ export function SignalScope({ active = true }: SignalScopeProps) {
   }, [error, frameRef, listening, locale, t]);
 
   return (
-    <div className="signal-scope" aria-label={t("scope.title")}>
+    <div className="signal-scope" data-guide="scope" aria-label={t("scope.title")}>
       <div className="signal-scope__meta">
         <span className="signal-scope__tag">SCOPE</span>
         <span className="signal-scope__hz">
@@ -348,6 +348,8 @@ export function SignalScope({ active = true }: SignalScopeProps) {
         <button
           type="button"
           className={play ? "signal-scope__btn is-on" : "signal-scope__btn"}
+          disabled={!enabled}
+          aria-pressed={play && enabled}
           onClick={() => setPlay((v) => !v)}
           title={t("scope.hint")}
         >
@@ -356,6 +358,8 @@ export function SignalScope({ active = true }: SignalScopeProps) {
         <button
           type="button"
           className={enabled ? "signal-scope__btn is-on" : "signal-scope__btn"}
+          aria-pressed={enabled}
+          aria-label={t(enabled ? "scope.disable" : "scope.enable")}
           onClick={() => setEnabled((v) => !v)}
         >
           {enabled ? (listening ? "LIVE" : error ? "MIC?" : "…") : "OFF"}

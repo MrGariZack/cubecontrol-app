@@ -4,11 +4,12 @@ import { readUriBytes } from "../device/files";
 import { confirmSongIrWrite } from "../ui/irConfirm";
 
 type Loader = {
+  irCabinet: number;
   applySong: (songId: string) => Promise<void>;
   loadIrWav: (
     wav: Uint8Array,
     cabinet: number,
-    options: { confirmFactoryIrOverwrite: boolean; distance: number; fileName?: string },
+    options: { confirmIrOverwrite: boolean; distance: number; fileName?: string },
   ) => Promise<boolean>;
 };
 
@@ -23,12 +24,15 @@ export async function applySongMaybeIr(
   if (!song.irId) return;
   const ir = library.irs.find((item) => item.id === song.irId);
   if (!ir) return;
-  const cabinet = song.irCabinet && song.irCabinet >= 1 && song.irCabinet <= 8 ? song.irCabinet : 8;
+  const cabinet = song.irCabinet && song.irCabinet >= 1 && song.irCabinet <= 8
+    ? song.irCabinet
+    : loader.irCabinet;
+  if (!cabinet) return;
   const ok = await confirmSongIrWrite(t, cabinet);
   if (!ok) return;
   const wav = await readUriBytes(ir.uri);
   await loader.loadIrWav(wav, cabinet, {
-    confirmFactoryIrOverwrite: cabinet !== 8,
+    confirmIrOverwrite: true,
     distance: song.irDistance ?? 0.5,
     fileName: ir.name,
   });

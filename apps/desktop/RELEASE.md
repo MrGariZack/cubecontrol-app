@@ -4,10 +4,10 @@
 
 | Archivo | Uso |
 |---|---|
-| `CubeControl-0.1.3-win-x64.exe` | Instalador **NSIS** Windows |
-| `CubeControl-0.1.3-portable.exe` | **Portable** Windows — no instala |
-| `CubeControl-0.1.3-linux-x86_64.AppImage` | Linux x64 — marcar ejecutable y abrir |
-| `CubeControl-0.1.3-linux-amd64.deb` | Ubuntu/Debian — `sudo apt install ./…deb` |
+| `CubeControl-0.1.4-win-x64.exe` | Instalador **NSIS** Windows |
+| `CubeControl-0.1.4-portable.exe` | **Portable** Windows — no instala |
+| `CubeControl-0.1.4-linux-x86_64.AppImage` | Linux x64 — marcar ejecutable y abrir |
+| `CubeControl-0.1.4-linux-amd64.deb` | Ubuntu/Debian — `sudo apt install ./…deb` |
 
 Windows: `%LOCALAPPDATA%\CubeControl-build\` (evita bloqueos EPERM en Desktop/OneDrive).  
 Linux: `apps/desktop/out/` (`pnpm desktop:dist:linux`).
@@ -58,7 +58,7 @@ Reconecta el pedal. Acepta el aviso de riesgos y pulsa **Conectar USB**.
 5. Acepta el aviso de riesgos de CubeControl.
 6. Pulsa **Conectar USB**.
 
-Lee [`SAFETY.md`](./SAFETY.md) antes de escribir IR a Cab 1–7.
+Lee [`SAFETY.md`](./SAFETY.md) antes de escribir un IR.
 
 ## Qué NO incluye aún
 
@@ -71,7 +71,7 @@ Lee [`SAFETY.md`](./SAFETY.md) antes de escribir IR a Cab 1–7.
 - [ ] `pnpm typecheck` OK en tonehub-app
 - [ ] `pnpm build` OK en Tonehub (core)
 - [ ] Smoke físico: connect → knobs → save slot → export bank
-- [ ] IR a **Cab 8** + verify en UI
+- [ ] IR a un gabinete elegido + verificación y restauración del respaldo en UI
 - [ ] Safety gate aparece en PC limpio / tras reset
 - [ ] Portable Windows arranca sin instalar
 - [ ] NSIS instala, crea acceso directo y desinstala limpio

@@ -1,10 +1,12 @@
-import { app, BrowserWindow, dialog, ipcMain, session } from "electron";
+import { app, BrowserWindow, dialog, ipcMain, session, type WebContents } from "electron";
 import { existsSync } from "node:fs";
 import { readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import type { LiveParamName, PresetSlotId } from "@tonehub/cube-baby-protocol";
+import { registerClipExport } from "./clipExport.js";
 import { DeviceBridge, type LiveParamsSnapshot, type MatchVolumesSource } from "./deviceBridge.js";
+import { midiLog } from "./midiLog.js";
 import {
   exportDiagnosticsBundle,
   openExternalUrl,
@@ -88,6 +90,25 @@ function resolveAppIcon(): string | undefined {
   return candidates.find((candidate) => existsSync(candidate));
 }
 
+const studioPage = path.join(__dirname, "../dist/index.html");
+
+function isStudioFrame(
+  contents: WebContents | null,
+  requestingUrl: string | undefined,
+  isMainFrame: boolean | undefined,
+): boolean {
+  if (!contents || !isMainFrame || !BrowserWindow.fromWebContents(contents)) return false;
+  try {
+    const url = new URL(requestingUrl ?? contents.getURL());
+    const devUrl = process.env.VITE_DEV_SERVER_URL;
+    return devUrl
+      ? url.origin === new URL(devUrl).origin
+      : url.protocol === "file:" && path.resolve(fileURLToPath(url)) === studioPage;
+  } catch {
+    return false;
+  }
+}
+
 function createWindow(): BrowserWindow {
   const icon = resolveAppIcon();
   const win = new BrowserWindow({
@@ -108,7 +129,7 @@ function createWindow(): BrowserWindow {
   if (process.env.VITE_DEV_SERVER_URL) {
     void win.loadURL(process.env.VITE_DEV_SERVER_URL);
   } else {
-    void win.loadFile(path.join(__dirname, "../dist/index.html"));
+    void win.loadFile(studioPage);
   }
   return win;
 }
@@ -147,15 +168,31 @@ app.whenReady().then(async () => {
     }, 2500);
   }
 
-  // Mic / audio input for the software tuner (renderer getUserMedia).
-  session.defaultSession.setPermissionRequestHandler((_wc, permission, callback) => {
-    callback(permission === "media" || permission === "mediaKeySystem");
+  // Only the studio's main frame can use input devices for the tuner and Clips.
+  session.defaultSession.setPermissionRequestHandler((contents, permission, callback, details) => {
+    callback(permission === "media" && isStudioFrame(contents, details.requestingUrl, details.isMainFrame));
   });
-  session.defaultSession.setPermissionCheckHandler((_wc, permission) => {
-    return permission === "media" || permission === "mediaKeySystem";
+  session.defaultSession.setPermissionCheckHandler((contents, permission, _origin, details) => {
+    return permission === "media" && isStudioFrame(contents, details.requestingUrl, details.isMainFrame);
   });
+  registerClipExport(({ sender, senderFrame }) =>
+    Boolean(senderFrame && isStudioFrame(sender, senderFrame.url, senderFrame.parent === null)),
+  );
+
+  function saveIrBackup(cabinet: number, sourceName: string) {
+    return (sector: Uint8Array) =>
+      library.saveIrBackup({ cabinet, romSlot: cabinet - 1, sector, sourceName });
+  }
 
   ipcMain.handle("tonehub:listPorts", async () => bridge.listPorts());
+  bridge.watchPorts(({ sessionLost }) => {
+    midiLog("ports-changed", { sessionLost });
+    for (const win of BrowserWindow.getAllWindows()) {
+      if (win.isDestroyed()) continue;
+      win.webContents.send("tonehub:portsChanged");
+      if (sessionLost) win.webContents.send("tonehub:pedalDetached");
+    }
+  });
   ipcMain.handle("tonehub:connect", async () => bridge.connect());
   ipcMain.handle("tonehub:disconnect", async () => {
     await bridge.disconnect();
@@ -185,23 +222,11 @@ app.whenReady().then(async () => {
       _event,
       wav: Uint8Array,
       cabinet: number,
-      options?: { confirmFactoryIrOverwrite?: boolean; distance?: number },
+      options?: { confirmIrOverwrite?: boolean; distance?: number },
     ) => {
       const bytes = wav instanceof Uint8Array ? wav : Uint8Array.from(wav);
-      const romSlot = cabinet - 1;
-      try {
-        const sector = await bridge.dumpIrRomSlot(romSlot);
-        await library.saveIrBackup({
-          cabinet,
-          romSlot,
-          sector,
-          sourceName: "pre-load-ir",
-        });
-      } catch (error) {
-        console.warn("safe IR backup failed", error);
-      }
-      return bridge.loadIrFromWav(bytes, cabinet, {
-        confirmFactoryIrOverwrite: options?.confirmFactoryIrOverwrite === true,
+      return bridge.loadIrFromWav(bytes, cabinet, saveIrBackup(cabinet, "pre-load-ir"), {
+        confirmIrOverwrite: options?.confirmIrOverwrite === true,
         ...(options?.distance === undefined ? {} : { distance: options.distance }),
       });
     },
@@ -311,23 +336,11 @@ app.whenReady().then(async () => {
       _event,
       irId: string,
       cabinet: number,
-      options?: { confirmFactoryIrOverwrite?: boolean; distance?: number },
+      options?: { confirmIrOverwrite?: boolean; distance?: number },
     ) => {
       const wav = await library.readIrWav(irId);
-      const romSlot = cabinet - 1;
-      try {
-        const sector = await bridge.dumpIrRomSlot(romSlot);
-        await library.saveIrBackup({
-          cabinet,
-          romSlot,
-          sector,
-          sourceName: `lib:${irId}`,
-        });
-      } catch (error) {
-        console.warn("safe IR backup failed", error);
-      }
-      return bridge.loadIrFromWav(wav, cabinet, {
-        confirmFactoryIrOverwrite: options?.confirmFactoryIrOverwrite === true,
+      return bridge.loadIrFromWav(wav, cabinet, saveIrBackup(cabinet, `lib:${irId}`), {
+        confirmIrOverwrite: options?.confirmIrOverwrite === true,
         ...(options?.distance === undefined ? {} : { distance: options.distance }),
       });
     },
@@ -337,9 +350,15 @@ app.whenReady().then(async () => {
     const item = index.irBackups.find((b) => b.id === backupId);
     if (item === undefined) throw new Error("backup no encontrado");
     const sector = await library.readIrBackup(backupId);
-    const verified = await bridge.persistIrRomSector(item.romSlot, sector);
-    await bridge.selectCabinet(item.cabinet);
-    return { verified, cabinet: item.cabinet, romSlot: item.romSlot };
+    if (!Number.isInteger(item.cabinet) || item.romSlot !== item.cabinet - 1) {
+      throw new Error("El gabinete del respaldo no coincide con su sector IR.");
+    }
+    await bridge.restoreIrRomSector(
+      item.romSlot,
+      sector,
+      saveIrBackup(item.cabinet, "pre-restore-ir"),
+    );
+    return { verified: true, cabinet: item.cabinet, romSlot: item.romSlot };
   });
   ipcMain.handle("library:saveSong", async (_event, input) => {
     const saved = await library.saveSong(input);

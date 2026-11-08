@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { SyncEngine } from "./engine";
+import { pullCloudReplaceLocal, uploadLocalReplaceCloud } from "./guided";
 import { computeLocalChanges, computeRemoteApplication } from "./merge";
 import type { LibraryRepository } from "./repository";
 import type { SyncChange, SyncPullResult, SyncRemote } from "./remote";
@@ -103,6 +104,15 @@ describe("computeLocalChanges", () => {
 });
 
 describe("computeRemoteApplication", () => {
+  it("does not resurrect a record from an upsert older than its local tombstone", () => {
+    const record = preset("a", iso(2000));
+    const remote: SyncChange = { kind: "preset", id: "a", updatedAt: iso(2000), deleted: false, record };
+    const state = { "preset:a": { updatedAt: iso(3000), deleted: true } };
+    const result = computeRemoteApplication([remote], [], state);
+    expect(result.applyUpserts).toEqual([]);
+    expect(result.nextEntries).toEqual(state);
+  });
+
   it("applies a newer remote upsert", () => {
     const remote = { kind: "preset" as const, id: "a", updatedAt: iso(2000), deleted: false as const, record: preset("a", iso(2000)) };
     const { applyUpserts, applyDeletes } = computeRemoteApplication([remote], [preset("a", iso(1000))], {});
@@ -128,6 +138,71 @@ describe("computeRemoteApplication", () => {
     const { applyUpserts, applyDeletes } = computeRemoteApplication([remote], [], baseEntries);
     expect(applyUpserts).toHaveLength(1);
     expect(applyDeletes).toHaveLength(0);
+  });
+});
+
+describe("guided first sync", () => {
+  const localIr: SyncRecord = {
+    kind: "ir",
+    id: "ir-local",
+    name: "Local WAV",
+    notes: "",
+    tags: [],
+    profile: "otro",
+    createdAt: iso(1000),
+    updatedAt: iso(1000),
+  };
+
+  it("uses cloud presets while preserving a local WAV absent from the cloud", async () => {
+    const repo = new FakeRepository();
+    const remote = new FakeRemote();
+    await repo.upsert(localIr);
+    await repo.upsert(preset("local", iso(1000)));
+    const record = preset("cloud", iso(2000));
+    await remote.push([{ kind: "preset", id: record.id, updatedAt: record.updatedAt, deleted: false, record }]);
+
+    const result = await pullCloudReplaceLocal(repo, remote);
+    expect(result.result.appliedDeletes).toBe(1);
+    expect(repo.records.get("ir:ir-local")).toEqual(localIr);
+    expect(repo.records.has("preset:local")).toBe(false);
+    expect(repo.records.get("preset:cloud")).toEqual(record);
+  });
+
+  it("does not send deletion markers for IRs absent from the uploading device", async () => {
+    const repo = new FakeRepository();
+    const remote = new FakeRemote();
+    await remote.push([{ kind: "ir", id: localIr.id, updatedAt: localIr.updatedAt, deleted: false, record: localIr }]);
+    await uploadLocalReplaceCloud(repo, remote, iso(2000));
+    expect(remote.server.get("ir:ir-local")?.deleted).toBe(false);
+  });
+
+  it("never mistakes remote-only IR metadata or an old fingerprint for a local deletion", async () => {
+    const repo = new FakeRepository();
+    const remote = new FakeRemote();
+    await remote.push([
+      { kind: "ir", id: localIr.id, updatedAt: localIr.updatedAt, deleted: false, record: localIr },
+    ]);
+    const engine = new SyncEngine(repo, remote, {
+      cursor: "1",
+      entries: { "ir:ir-local": { updatedAt: localIr.updatedAt, deleted: false } },
+    });
+    await engine.sync();
+    await engine.sync();
+    expect(repo.records.size).toBe(0);
+    expect(remote.server.get("ir:ir-local")?.deleted).toBe(false);
+  });
+
+  it("keeps another device's WAV when the cloud metadata was deleted", async () => {
+    const repo = new FakeRepository();
+    const remote = new FakeRemote();
+    await repo.upsert(localIr);
+    const engine = new SyncEngine(repo, remote, emptySyncState());
+    await engine.sync();
+    await remote.push([{ kind: "ir", id: localIr.id, updatedAt: iso(2000), deleted: true }]);
+    await engine.sync();
+    await engine.sync();
+    expect(repo.records.get("ir:ir-local")).toEqual(localIr);
+    expect(remote.server.get("ir:ir-local")?.deleted).toBe(true);
   });
 });
 

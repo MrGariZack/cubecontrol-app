@@ -4,7 +4,7 @@ import { useI18n } from "../i18n";
 import { MicDistanceRail } from "./cube-baby/MicDistanceRail";
 import "./device-workspace.css";
 
-/** Pedal Cabinet 1..8 → ROM IR slots 0..7 (Cab 8 = upload). */
+/** Pedal Cabinet 1..8 → ROM IR slots 0..7. */
 const IR_CABINETS = [1, 2, 3, 4, 5, 6, 7, 8] as const;
 
 type DeviceWorkspaceProps = {
@@ -46,7 +46,7 @@ export function DeviceWorkspace({
       </header>
 
       <div className="dev-ws__grid">
-        <section className="dev-ws__card" aria-labelledby="dev-bank-heading">
+        <section className="dev-ws__card dev-ws__card--bank" aria-labelledby="dev-bank-heading" data-guide="bank">
           <h2 id="dev-bank-heading" className="dev-ws__card-title">
             Bank
           </h2>
@@ -71,7 +71,7 @@ export function DeviceWorkspace({
           </div>
         </section>
 
-        <section className="dev-ws__card dev-ws__card--ir" aria-labelledby="dev-ir-heading">
+        <section className="dev-ws__card dev-ws__card--ir" aria-labelledby="dev-ir-heading" data-guide="load-ir">
           <h2 id="dev-ir-heading" className="dev-ws__card-title">
             {t("device.ir.title")}
           </h2>
@@ -85,10 +85,10 @@ export function DeviceWorkspace({
               aria-label={t("device.ir.cabinetAria")}
               onChange={(event) => onIrCabinetChange(Number(event.target.value))}
             >
+              <option value={0} disabled>{t("studio.pickCab")}</option>
               {IR_CABINETS.map((cabinet) => (
                 <option key={cabinet} value={cabinet}>
                   Cab {cabinet}
-                  {cabinet === 8 ? t("device.ir.safe") : t("device.ir.risk")}
                 </option>
               ))}
             </select>
@@ -106,7 +106,7 @@ export function DeviceWorkspace({
             <button
               type="button"
               className="dev-ws__btn dev-ws__btn--primary dev-ws__btn--lg"
-              disabled={busy}
+              disabled={busy || irCabinet === 0}
               onClick={onLoadIr}
             >
               {t("device.ir.load")}
@@ -125,13 +125,14 @@ export function DeviceWorkspace({
               className="dev-ws__btn dev-ws__btn--primary"
               disabled={busy}
               onClick={onCompare}
+              data-guide="compare"
             >
               {t("device.levels.compare")}
             </button>
           </div>
         </section>
 
-        <section className="dev-ws__card dev-ws__card--warn" aria-labelledby="dev-safety-heading">
+        <section className="dev-ws__card dev-ws__card--warn" aria-labelledby="dev-safety-heading" data-guide="reset-safety safety">
           <h2 id="dev-safety-heading" className="dev-ws__card-title">
             {t("device.safety.title")}
           </h2>

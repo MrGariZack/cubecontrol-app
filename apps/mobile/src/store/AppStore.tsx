@@ -36,7 +36,7 @@ import {
   type MatchVolumesSource,
 } from "../device/bank";
 import { readUriBytes, writeLibraryWav } from "../device/files";
-import { loadIrFromWav as restoreLoadIr } from "../device/ir";
+import { loadIrFromWav, restoreIrBackup } from "../device/ir";
 import { applyLiveParams, applySlotToLive, bankSummary, slotIndexOf, writeLiveParam } from "../device/live";
 import { loadLibrary, newId, nowIso, saveLibrary } from "../library/storage";
 import type {
@@ -93,6 +93,7 @@ type AppState = {
   readonly undoCount: number;
   readonly redoCount: number;
   readonly irCabinet: number;
+  restoreLastIrBackup: (cabinet: number, confirmed: boolean) => Promise<void>;
   readonly irDistance: number;
   readonly sync: MobileSyncStatus;
   readonly syncBusy: boolean;
@@ -124,7 +125,7 @@ type AppActions = {
   loadIrWav: (
     wav: Uint8Array,
     cabinet: number,
-    options: { confirmFactoryIrOverwrite: boolean; distance: number; fileName?: string },
+    options: { confirmIrOverwrite: boolean; distance: number; fileName?: string },
   ) => Promise<boolean>;
   setIrCabinet: (cabinet: number) => void;
   setIrDistance: (distance: number) => void;
@@ -221,7 +222,7 @@ export function AppProvider({ children }: { readonly children: ReactNode }) {
   const [safetyReady, setSafetyReady] = useState(false);
   const [undoCount, setUndoCount] = useState(0);
   const [redoCount, setRedoCount] = useState(0);
-  const [irCabinet, setIrCabinetState] = useState(8);
+  const [irCabinet, setIrCabinetState] = useState(0);
   const [irDistance, setIrDistanceState] = useState(0.5);
   const [sync, setSync] = useState<MobileSyncStatus>({
     configured: true,
@@ -988,7 +989,7 @@ export function AppProvider({ children }: { readonly children: ReactNode }) {
     async (
       wav: Uint8Array,
       cabinet: number,
-      options: { confirmFactoryIrOverwrite: boolean; distance: number; fileName?: string },
+      options: { confirmIrOverwrite: boolean; distance: number; fileName?: string },
     ): Promise<boolean> => {
       await safetyLoadRef.current;
       requireSafety();
@@ -997,9 +998,10 @@ export function AppProvider({ children }: { readonly children: ReactNode }) {
         const result = await enqueue(async () => {
           pushCheckpoint("ir");
           const current = requireSession();
-          return restoreLoadIr(current.session, wav, cabinet, {
-            confirmFactoryIrOverwrite: options.confirmFactoryIrOverwrite,
+          return loadIrFromWav(current.session, wav, cabinet, {
+            confirmIrOverwrite: options.confirmIrOverwrite,
             distance: options.distance,
+            keepBackup: current.mode === "usb",
           });
         });
         setLive((prev) => {
@@ -1020,6 +1022,37 @@ export function AppProvider({ children }: { readonly children: ReactNode }) {
       }
     },
     [enqueue, pushCheckpoint, requireSafety, requireSession],
+  );
+
+  const restoreLastIrBackup = useCallback(
+    async (cabinet: number, confirmed: boolean) => {
+      if (confirmed !== true) return;
+      await safetyLoadRef.current;
+      requireSafety();
+      setBusy(true);
+      setError(null);
+      setStatus(null);
+      try {
+        await enqueue(async () => {
+          const current = requireSession();
+          if (current.mode !== "usb") throw new Error("Conecta el pedal para restaurar un IR.");
+          await restoreIrBackup(current.session, cabinet);
+        });
+        setLive((prev) => {
+          if (!prev) return prev;
+          const next = { ...prev, cabinet };
+          liveRef.current = next;
+          return next;
+        });
+        setStatus(`Cab ${cabinet} · IR restaurado`);
+      } catch (err) {
+        setError(messageOf(err));
+        setErrorCode(errorCodeOf(err));
+      } finally {
+        setBusy(false);
+      }
+    },
+    [enqueue, requireSafety, requireSession],
   );
 
   const setIrCabinet = useCallback((cabinet: number) => {
@@ -1136,7 +1169,7 @@ export function AppProvider({ children }: { readonly children: ReactNode }) {
       if (!ir) return false;
       const wav = await readUriBytes(ir.uri);
       return loadIrWav(wav, irCabinet, {
-        confirmFactoryIrOverwrite: irCabinet !== 8,
+        confirmIrOverwrite: true,
         distance: irDistance,
         fileName: ir.name,
       });
@@ -1299,7 +1332,7 @@ export function AppProvider({ children }: { readonly children: ReactNode }) {
               ...(input.irId
                 ? {
                     irId: input.irId,
-                    irCabinet: input.irCabinet ?? irCabinet,
+                    ...((input.irCabinet ?? irCabinet) ? { irCabinet: input.irCabinet ?? irCabinet } : {}),
                     irDistance: input.irDistance ?? irDistance,
                   }
                 : {}),
@@ -1324,7 +1357,7 @@ export function AppProvider({ children }: { readonly children: ReactNode }) {
         ...(input.irId
           ? {
               irId: input.irId,
-              irCabinet: input.irCabinet ?? irCabinet,
+              ...((input.irCabinet ?? irCabinet) ? { irCabinet: input.irCabinet ?? irCabinet } : {}),
               irDistance: input.irDistance ?? irDistance,
             }
           : {}),
@@ -1536,6 +1569,7 @@ export function AppProvider({ children }: { readonly children: ReactNode }) {
       undoCount,
       redoCount,
       irCabinet,
+      restoreLastIrBackup,
       irDistance,
       sync,
       syncBusy,
@@ -1624,6 +1658,7 @@ export function AppProvider({ children }: { readonly children: ReactNode }) {
       importPack,
       importShare,
       irCabinet,
+      restoreLastIrBackup,
       irDistance,
       library,
       live,

@@ -11,6 +11,8 @@ export interface FingerprintEntry {
   readonly updatedAt: string;
   /** Whether the last pushed state was a tombstone (delete). */
   readonly deleted: boolean;
+  /** IR metadata pulled without a local WAV must never imply a local deletion. */
+  readonly hadLocalIr?: true;
 }
 
 export interface SyncState {
